@@ -4,3 +4,4 @@ scikit-learn
 yfinance
 textblob
 requests
+TA-Lib
