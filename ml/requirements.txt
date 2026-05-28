@@ -1,0 +1,9 @@
+pandas
+numpy
+scikit-learn
+yfinance
+joblib
+optuna
+xgboost
+lightgbm
+torch

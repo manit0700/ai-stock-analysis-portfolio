@@ -1,69 +1,47 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+*.pem
+*.key
+*.crt
+kaggle.json
+access_token
+.kaggle/
+
 # Python
 __pycache__/
 *.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# Virtual environments
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
 venv/
 env/
-ENV/
-env.bak/
-venv.bak/
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
+# Node / Next.js
+node_modules/
+.next/
+out/
+dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
-# OS
+# OS / editor
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
+.idea/
+.vscode/
 
-# API Keys and sensitive data
-.env
-*.key
-config.ini
+# Runtime logs and generated local state
+*.log
+backend/data/*.jsonl
 
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# pytest
-.pytest_cache/
-
-# Coverage reports
-htmlcov/
-.coverage
-.coverage.*
-coverage.xml
-*.cover
-.hypothesis/
-
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json 
+# Large generated datasets
+*.parquet
+*.csv

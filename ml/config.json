@@ -1,0 +1,9 @@
+{
+  "tickers": ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "TSLA"],
+  "period": "5y",
+  "interval": "1d",
+  "prediction_horizon": 5,
+  "n_trials": 30,
+  "model_family": "xgboost",
+  "output_dir": "ml/artifacts"
+}

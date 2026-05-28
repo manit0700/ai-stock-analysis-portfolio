@@ -1,0 +1,161 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: dark; }
+
+* { box-sizing: border-box; }
+
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body {
+  min-height: 100vh;
+  position: fixed;
+  inset: 0;
+  background: #040404;
+  color: #c8c8c8;
+  font-family: 'Courier New', 'Lucida Console', ui-monospace, monospace;
+}
+
+body > div,
+main {
+  width: 100vw;
+  max-width: 100vw;
+  min-width: 0;
+}
+
+/* ── Terminal panels ───────────────────────────── */
+.t-panel {
+  border: 1px solid rgba(255, 140, 0, 0.16);
+  background: #070707;
+}
+
+.t-header {
+  padding: 3px 10px;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #ff8c00;
+  background: rgba(255, 140, 0, 0.06);
+  border-bottom: 1px solid rgba(255, 140, 0, 0.16);
+  user-select: none;
+}
+
+/* ── Ticker tape ───────────────────────────────── */
+@keyframes tickerMove {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.ticker-inner { animation: tickerMove 35s linear infinite; white-space: nowrap; }
+.ticker-inner:hover { animation-play-state: paused; }
+
+/* ── Cursor blink ──────────────────────────────── */
+@keyframes cursorBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.bb-cursor::after {
+  content: '▌';
+  animation: cursorBlink 0.9s step-end infinite;
+  color: #ff8c00;
+  margin-left: 1px;
+}
+
+/* ── Scanlines (subtle CRT effect) ────────────── */
+.scanlines::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(0,0,0,0.06) 3px,
+    rgba(0,0,0,0.06) 4px
+  );
+}
+
+/* ── Scrollbar ─────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: #050505; }
+::-webkit-scrollbar-thumb { background: rgba(255,140,0,0.25); border-radius: 2px; }
+
+/* ── Table rows ────────────────────────────────── */
+.t-row { border-bottom: 1px solid rgba(255,255,255,0.04); }
+.t-row:hover { background: rgba(255,140,0,0.04); }
+.t-row:last-child { border-bottom: none; }
+
+/* ── Tab active top line ───────────────────────── */
+.tab-active { border-top: 2px solid #ff8c00; }
+.tab-inactive { border-top: 2px solid transparent; }
+
+/* ── Input terminal style ──────────────────────── */
+.bb-input {
+  background: #0a0a0a;
+  border: 1px solid rgba(255,140,0,0.25);
+  color: #e8e8e8;
+  font-family: inherit;
+  outline: none;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+.bb-input:focus { border-color: #ff8c00; }
+
+/* ── Button terminal style ─────────────────────── */
+.bb-btn {
+  background: rgba(255,140,0,0.1);
+  border: 1px solid rgba(255,140,0,0.3);
+  color: #ff8c00;
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.bb-btn:hover { background: rgba(255,140,0,0.2); }
+.bb-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.bb-btn-green {
+  background: rgba(0,204,85,0.08);
+  border: 1px solid rgba(0,204,85,0.25);
+  color: #00cc55;
+}
+.bb-btn-green:hover { background: rgba(0,204,85,0.16); }
+
+/* ── Utility colors ────────────────────────────── */
+.bb-amber { color: #ff8c00; }
+.bb-green { color: #00cc55; }
+.bb-red   { color: #ff4444; }
+.bb-dim   { color: #8a8a8a; }
+.bb-white { color: #e8e8e8; }
+.bb-cyan  { color: #00bfff; }
+.bb-yellow{ color: #ffd700; }
+
+/* ── Progress bar ──────────────────────────────── */
+.bb-bar-track {
+  background: rgba(255,255,255,0.06);
+  height: 6px;
+}
+.bb-bar-fill {
+  height: 100%;
+  background: linear-gradient(to right, #ff8c00, #ffcc00);
+}
+.bb-bar-fill-green {
+  height: 100%;
+  background: linear-gradient(to right, #00aa44, #00cc55);
+}
+.bb-bar-fill-red {
+  height: 100%;
+  background: #ff4444;
+}

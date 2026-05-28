@@ -1,0 +1,20 @@
+{
+  "version": "model_20260510_165409",
+  "model_family": "xgboost",
+  "best_params": {
+    "n_estimators": 537,
+    "max_depth": 2,
+    "learning_rate": 0.02592901587361783,
+    "subsample": 0.9184936921719742,
+    "colsample_bytree": 0.9405951243793048
+  },
+  "cross_validation_f1_macro": 0.35097172027970475,
+  "holdout_metrics": {
+    "accuracy": 0.38837516512549536,
+    "f1_macro": 0.3478120861164291,
+    "direction_mae": 0.8844121532364597,
+    "test_rows": 1514
+  },
+  "dataset_path": "ml/artifacts/training_dataset.parquet",
+  "created_at": "2026-05-10T16:54:09.111117+00:00"
+}

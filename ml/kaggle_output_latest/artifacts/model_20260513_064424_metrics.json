@@ -1,0 +1,467 @@
+{
+  "version": "model_20260513_064424",
+  "model_family": "ensemble_xgboost",
+  "gpu_used": true,
+  "tickers": [
+    "AAPL",
+    "MSFT",
+    "NVDA",
+    "GOOGL",
+    "AMZN",
+    "META",
+    "TSLA",
+    "AMD",
+    "INTC",
+    "QCOM",
+    "AVGO",
+    "MU",
+    "ORCL",
+    "CRM",
+    "ADBE",
+    "JPM",
+    "BAC",
+    "GS",
+    "V",
+    "MA",
+    "UNH",
+    "JNJ",
+    "PFE",
+    "ABBV",
+    "XOM",
+    "CVX",
+    "CAT",
+    "BA",
+    "WMT",
+    "HD",
+    "NKE",
+    "SPY",
+    "QQQ",
+    "IWM",
+    "XLK",
+    "XLF",
+    "XLE",
+    "XLV"
+  ],
+  "features": [
+    "ten_year_yield_proxy",
+    "ten_year_yield_change_20",
+    "xlb_ret20",
+    "sma50_200_cross",
+    "month_sin",
+    "xlf_ret20",
+    "vix_level",
+    "xlc_ret20",
+    "xle_ret20",
+    "xlu_ret20",
+    "xli_ret20",
+    "xlp_ret20",
+    "vol_20",
+    "spy_sma50g",
+    "adx",
+    "qqq_sma50g",
+    "trend_slope_50",
+    "ema20_50_cross",
+    "sma20_50_cross",
+    "sma200_gap",
+    "obv_mom",
+    "bb_width",
+    "vol_expansion_10_20",
+    "atr_norm",
+    "month_cos",
+    "vol_ratio_15",
+    "xly_ret20",
+    "spy_vol20",
+    "rsi_divergence_strength",
+    "vol_10",
+    "atr_slope_5",
+    "accumulation_pressure",
+    "macd_hist",
+    "xlv_ret20",
+    "xle_ret5",
+    "xlb_ret5",
+    "macd_signal",
+    "sector_dispersion_5",
+    "rsi_slope_10",
+    "bb_width_slope",
+    "xlk_ret20",
+    "rsi_slope_5",
+    "xlu_ret5",
+    "ema50_gap",
+    "sector_worst_ret5"
+  ],
+  "all_candidate_feature_count": 113,
+  "n_features": 45,
+  "prediction_horizon": 10,
+  "atr_label_multiplier": 0.75,
+  "available_targets": [
+    "target",
+    "target_binary",
+    "target_return_horizon",
+    "target_future_range_high_pct",
+    "target_future_range_low_pct",
+    "target_breakout",
+    "target_breakdown",
+    "target_reversal",
+    "target_volatility_expansion",
+    "target_risk_adjusted_return"
+  ],
+  "best_params": {
+    "xgboost": {
+      "n_estimators": 810,
+      "max_depth": 4,
+      "learning_rate": 0.14629139146151102,
+      "subsample": 0.5316582499537487,
+      "colsample_bytree": 0.9915926587919772,
+      "min_child_weight": 4,
+      "gamma": 0.16864484552717868,
+      "reg_alpha": 0.8548751750296577,
+      "reg_lambda": 3.103931231942963
+    }
+  },
+  "raw_optuna_params": {
+    "xgboost": {
+      "xgb_n_est": 810,
+      "xgb_depth": 4,
+      "xgb_lr": 0.14629139146151102,
+      "xgb_sub": 0.5316582499537487,
+      "xgb_col": 0.9915926587919772,
+      "xgb_mcw": 4,
+      "xgb_gamma": 0.16864484552717868,
+      "xgb_alpha": 0.8548751750296577,
+      "xgb_lam": 3.103931231942963
+    }
+  },
+  "cv_f1_macro": {
+    "xgboost": 0.3285047444710746
+  },
+  "holdout_metrics": {
+    "accuracy": 0.36803394625176805,
+    "f1_macro": 0.3362249116675504,
+    "precision_macro": 0.35382156100185086,
+    "recall_macro": 0.3443470798771353,
+    "return_proxy_mae": 0.05147687915934959,
+    "return_proxy_rmse": 0.0791324376545808,
+    "test_rows": 7070,
+    "class_counts": {
+      "bullish": 2949,
+      "bearish": 2161,
+      "sideways": 1960
+    },
+    "confidence_buckets": {
+      ">=60%": {
+        "accuracy": 0.35981885549608894,
+        "coverage": 0.3435643564356436,
+        "signals": 2429
+      },
+      ">=70%": {
+        "accuracy": 0.3678357570573139,
+        "coverage": 0.16534653465346535,
+        "signals": 1169
+      },
+      ">=80%": {
+        "accuracy": 0.4220430107526882,
+        "coverage": 0.05261669024045262,
+        "signals": 372
+      },
+      ">=85%": {
+        "accuracy": 0.42758620689655175,
+        "coverage": 0.02050919377652051,
+        "signals": 145
+      }
+    }
+  },
+  "binary_high_confidence": {
+    "artifact": "model_20260513_064424_binary_direction.joblib",
+    "target": "forward_return > 0 over prediction_horizon",
+    "all_signal_accuracy": 0.49207920792079207,
+    "f1": 0.5258153968044368,
+    "precision": 0.5428026172300982,
+    "recall": 0.5098591549295775,
+    "test_rows": 7070,
+    "class_counts": {
+      "up": 3905,
+      "down_or_flat": 3165
+    },
+    "confidence_buckets": {
+      ">=60%": {
+        "accuracy": 0.49324452901998095,
+        "coverage": 0.7432814710042432,
+        "signals": 5255
+      },
+      ">=70%": {
+        "accuracy": 0.502283105022831,
+        "coverage": 0.4956152758132956,
+        "signals": 3504
+      },
+      ">=80%": {
+        "accuracy": 0.5015756302521008,
+        "coverage": 0.2693069306930693,
+        "signals": 1904
+      },
+      ">=85%": {
+        "accuracy": 0.5072836332476436,
+        "coverage": 0.16506364922206507,
+        "signals": 1167
+      }
+    },
+    "proof_rule": "Only claim 75%+ accuracy for confidence buckets whose measured walk-forward accuracy is >= 0.75 and whose coverage is disclosed."
+  },
+  "auxiliary_target_models": {
+    "artifact": "model_20260513_064424_auxiliary_targets.joblib",
+    "classification_targets": [
+      "target_breakout",
+      "target_breakdown",
+      "target_reversal",
+      "target_volatility_expansion"
+    ],
+    "regression_targets": [
+      "target_return_horizon",
+      "target_future_range_high_pct",
+      "target_future_range_low_pct",
+      "target_risk_adjusted_return"
+    ],
+    "metrics": {
+      "classification": {
+        "target_breakout": {
+          "accuracy": 0.7214992927864216,
+          "f1": 0.6910403263769026,
+          "precision": 0.6981610653138871,
+          "recall": 0.6840633737185461,
+          "positive_rate": 0.4461103253182461,
+          "class_counts": {
+            "0": 3851,
+            "1": 3219
+          },
+          "confidence_buckets": {
+            ">=60%": {
+              "accuracy": 0.7469898860170172,
+              "coverage": 0.881046676096181,
+              "signals": 6229
+            },
+            ">=70%": {
+              "accuracy": 0.7707472775065716,
+              "coverage": 0.7533239038189533,
+              "signals": 5326
+            },
+            ">=80%": {
+              "accuracy": 0.8056594948550047,
+              "coverage": 0.6048090523338048,
+              "signals": 4276
+            },
+            ">=85%": {
+              "accuracy": 0.8252561617280532,
+              "coverage": 0.5107496463932107,
+              "signals": 3611
+            }
+          }
+        },
+        "target_breakdown": {
+          "accuracy": 0.7711456859971711,
+          "f1": 0.6380313199105145,
+          "precision": 0.6391752577319587,
+          "recall": 0.6368914694059848,
+          "positive_rate": 0.3155586987270156,
+          "class_counts": {
+            "0": 4831,
+            "1": 2239
+          },
+          "confidence_buckets": {
+            ">=60%": {
+              "accuracy": 0.7978373295721674,
+              "coverage": 0.9025459688826025,
+              "signals": 6381
+            },
+            ">=70%": {
+              "accuracy": 0.82733181099596,
+              "coverage": 0.8052333804809052,
+              "signals": 5693
+            },
+            ">=80%": {
+              "accuracy": 0.8581765557163531,
+              "coverage": 0.6841584158415842,
+              "signals": 4837
+            },
+            ">=85%": {
+              "accuracy": 0.8761329305135952,
+              "coverage": 0.6086280056577086,
+              "signals": 4303
+            }
+          }
+        },
+        "target_reversal": {
+          "accuracy": 0.7227722772277227,
+          "f1": 0.3453573814295257,
+          "precision": 0.4822761194029851,
+          "recall": 0.26899063475546303,
+          "positive_rate": 0.15162659123055164,
+          "class_counts": {
+            "0": 5148,
+            "1": 1922
+          },
+          "confidence_buckets": {
+            ">=60%": {
+              "accuracy": 0.752904598265423,
+              "coverage": 0.8643564356435643,
+              "signals": 6111
+            },
+            ">=70%": {
+              "accuracy": 0.7804160125588697,
+              "coverage": 0.7207920792079208,
+              "signals": 5096
+            },
+            ">=80%": {
+              "accuracy": 0.8167979002624672,
+              "coverage": 0.5388967468175389,
+              "signals": 3810
+            },
+            ">=85%": {
+              "accuracy": 0.8484546360917248,
+              "coverage": 0.4256011315417256,
+              "signals": 3009
+            }
+          }
+        },
+        "target_volatility_expansion": {
+          "accuracy": 0.7237623762376237,
+          "f1": 0.5806313077088254,
+          "precision": 0.5748299319727891,
+          "recall": 0.5865509761388287,
+          "positive_rate": 0.3326732673267327,
+          "class_counts": {
+            "0": 4765,
+            "1": 2305
+          },
+          "confidence_buckets": {
+            ">=60%": {
+              "accuracy": 0.7498797498797499,
+              "coverage": 0.8821782178217822,
+              "signals": 6237
+            },
+            ">=70%": {
+              "accuracy": 0.7725652092325014,
+              "coverage": 0.7537482319660538,
+              "signals": 5329
+            },
+            ">=80%": {
+              "accuracy": 0.8010133578995855,
+              "coverage": 0.6141442715700142,
+              "signals": 4342
+            },
+            ">=85%": {
+              "accuracy": 0.8188658962644451,
+              "coverage": 0.5263083451202263,
+              "signals": 3721
+            }
+          }
+        }
+      },
+      "regression": {
+        "target_return_horizon": {
+          "mae": 0.04927566690524687,
+          "rmse": 0.07555405933934593,
+          "directional_accuracy": 0.5644978783592645,
+          "prediction_mean": 0.007996629605557894,
+          "actual_mean": 0.014067657444554939
+        },
+        "target_future_range_high_pct": {
+          "mae": 0.037551826714056165,
+          "rmse": 0.06382796459000169,
+          "directional_accuracy": 0.9608203677510608,
+          "prediction_mean": 0.04987880123813427,
+          "actual_mean": 0.05481851398586501
+        },
+        "target_future_range_low_pct": {
+          "mae": 0.02799177578546852,
+          "rmse": 0.038409196686216084,
+          "directional_accuracy": 0.9295615275813296,
+          "prediction_mean": -0.04349484828444358,
+          "actual_mean": -0.040318882620511476
+        },
+        "target_risk_adjusted_return": {
+          "mae": 2.124394612199672,
+          "rmse": 2.87083020755008,
+          "directional_accuracy": 0.5108910891089109,
+          "prediction_mean": 0.21813219637926826,
+          "actual_mean": 0.5026974000272646
+        }
+      }
+    },
+    "usage": "These models support probability-based breakout, breakdown, reversal, volatility, future range, and risk-adjusted return intelligence. They do not guarantee outcomes."
+  },
+  "training_phase_manifest": {
+    "phase_1_intraday_data": {
+      "status": "missing",
+      "details": "Config tracks intended 1m/5m/15m/1h/4h support, but this Kaggle script still trains on daily yfinance candles. Polygon/Alpaca intraday storage is required for production coverage."
+    },
+    "phase_2_vwap_features": {
+      "status": "missing",
+      "details": "VWAP requires intraday bars. Add after intraday data lands."
+    },
+    "phase_3_multi_timeframe_alignment": {
+      "status": "missing",
+      "details": "Needs intraday/daily aligned feature table."
+    },
+    "phase_4_market_regime_detection": {
+      "status": "partial",
+      "details": "SPY/QQQ trend, VIX regime, volatility, and yield proxy features are included. Full regime classifier is pending."
+    },
+    "phase_5_macro_vix_data": {
+      "status": "partial",
+      "details": "VIX and 10-year yield proxy are included from Yahoo. FRED inflation, GDP, unemployment, Fed/CPI calendars are pending."
+    },
+    "phase_6_sector_rotation": {
+      "status": "partial",
+      "details": "Sector ETF returns, basket strength, dispersion, and stock-vs-sector basket strength are included."
+    },
+    "phase_7_news_sentiment": {
+      "status": "missing",
+      "details": "FinBERT/OpenAI sentiment pipeline is not part of this Kaggle training script yet."
+    },
+    "phase_8_event_flags": {
+      "status": "missing",
+      "details": "Earnings, Fed, CPI, OPEX, and major-event flags require event calendar ingestion."
+    },
+    "phase_9_improved_labels": {
+      "status": "trained",
+      "details": "Adds and trains models for 3-class ATR labels, binary direction, breakout, breakdown, reversal, volatility expansion, future return, future range, and risk-adjusted return targets."
+    },
+    "phase_10_confidence_filtering": {
+      "status": "trained",
+      "details": "Reports all-signal and >=60/70/80/85 confidence bucket accuracy with coverage."
+    },
+    "phase_11_historical_similarity": {
+      "status": "partial",
+      "details": "Backend has a similarity service. Training artifact does not yet ensemble it."
+    },
+    "phase_12_monte_carlo_simulation": {
+      "status": "partial",
+      "details": "Backend simulation exists. Training artifact does not yet save Monte Carlo calibration parameters."
+    },
+    "phase_13_sequence_models": {
+      "status": "missing",
+      "details": "LSTM/GRU/Transformer/TFT should come after feature and label quality improves."
+    },
+    "phase_14_ensemble_strategy": {
+      "status": "partial",
+      "details": "Stable artifact trains multiple XGBoost classifiers/regressors. LightGBM/CatBoost hooks remain disabled because previous Kaggle GPU runs warned/segfaulted."
+    },
+    "phase_15_walk_forward_validation": {
+      "status": "partial",
+      "details": "Optuna uses TimeSeriesSplit and final holdout is chronological. Full rolling walk-forward backtest windows are pending."
+    },
+    "phase_16_drift_retraining": {
+      "status": "missing",
+      "details": "Model/version metadata is saved; automated drift detection and retraining scheduler are pending."
+    },
+    "phase_17_llm_explanation_layer": {
+      "status": "partial",
+      "details": "Metrics and backend provide explanation-ready facts. LLM remains explanation-only, not a direct price predictor."
+    },
+    "extra_technical_volume_divergence": {
+      "status": "trained",
+      "details": "Adds SMA/WMA/EMA, RSI, MACD, Bollinger, ATR/ADX, 2x/3x volume spikes, volume-confirmed breakouts/breakdowns, and RSI bullish/bearish divergence features."
+    }
+  },
+  "honesty_policy": "Outputs are probability-based market simulations and AI-generated financial intelligence, not financial advice. Accuracy claims must include validation method, confidence threshold, and coverage.",
+  "created_at": "2026-05-13T06:44:24.699949+00:00"
+}

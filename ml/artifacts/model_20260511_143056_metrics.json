@@ -1,0 +1,47 @@
+{
+  "version": "model_20260511_143056",
+  "model_family": "xgboost",
+  "gpu_used": true,
+  "tickers": [
+    "AAPL",
+    "MSFT",
+    "NVDA",
+    "GOOGL",
+    "AMZN",
+    "META",
+    "TSLA",
+    "JPM",
+    "V",
+    "UNH",
+    "AMD",
+    "INTC",
+    "QCOM",
+    "AVGO",
+    "MU",
+    "SPY",
+    "QQQ"
+  ],
+  "best_params": {
+    "n_estimators": 407,
+    "max_depth": 5,
+    "learning_rate": 0.013457594942406555,
+    "subsample": 0.6505230311111149,
+    "colsample_bytree": 0.8408458952343606,
+    "min_child_weight": 4,
+    "gamma": 0.23415952223659803
+  },
+  "cross_validation_f1_macro": 0.38692441678694556,
+  "holdout_metrics": {
+    "accuracy": 0.4139243948871362,
+    "f1_macro": 0.39759567780958505,
+    "direction_mae": 0.8400870274680446,
+    "test_rows": 3677,
+    "class_counts": {
+      "2": 7850,
+      "0": 6469,
+      "1": 6108
+    }
+  },
+  "dataset_path": "/kaggle/working/artifacts/training_dataset.parquet",
+  "created_at": "2026-05-11T14:30:56.615168+00:00"
+}

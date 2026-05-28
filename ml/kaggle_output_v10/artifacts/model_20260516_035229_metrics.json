@@ -1,0 +1,2107 @@
+{
+  "version": "model_20260516_035229",
+  "model_family": "ensemble_xgboost",
+  "gpu_used": true,
+  "tickers": [
+    "AAPL",
+    "MSFT",
+    "NVDA",
+    "GOOGL",
+    "AMZN",
+    "META",
+    "TSLA",
+    "AMD",
+    "INTC",
+    "QCOM",
+    "AVGO",
+    "MU",
+    "ORCL",
+    "CRM",
+    "ADBE",
+    "JPM",
+    "BAC",
+    "GS",
+    "V",
+    "MA",
+    "UNH",
+    "JNJ",
+    "PFE",
+    "ABBV",
+    "XOM",
+    "CVX",
+    "CAT",
+    "BA",
+    "WMT",
+    "HD",
+    "NKE",
+    "SPY",
+    "QQQ",
+    "IWM",
+    "XLK",
+    "XLF",
+    "XLE",
+    "XLV"
+  ],
+  "features": [
+    "ten_year_yield_proxy",
+    "ten_year_yield_change_20",
+    "sma50_200_cross",
+    "xle_ret20",
+    "vix_level",
+    "xlb_ret20",
+    "month_sin",
+    "xlc_ret20",
+    "xlp_ret20",
+    "xli_ret20",
+    "xlf_ret20",
+    "xlu_ret20",
+    "qqq_sma50g",
+    "obv_mom",
+    "ema20_50_cross",
+    "adx",
+    "spy_sma50g",
+    "trend_slope_50",
+    "atr_norm",
+    "vol_20",
+    "sma200_gap",
+    "bb_width",
+    "xly_ret20",
+    "volatility_ratio",
+    "rsi_divergence_strength",
+    "month_cos",
+    "xlv_ret20",
+    "atr_slope_5",
+    "vol_10",
+    "bb_width_slope",
+    "sma20_50_cross",
+    "spy_vol20",
+    "trend_slope_10",
+    "macd_signal",
+    "rsi_slope_5",
+    "xlc_ret5",
+    "macd_hist",
+    "accumulation_pressure",
+    "xlp_ret5",
+    "sector_dispersion_5",
+    "xlk_ret20",
+    "vol_ratio_15",
+    "rsi_slope_10",
+    "xle_ret5",
+    "rel_qqq5"
+  ],
+  "all_candidate_feature_count": 158,
+  "n_features": 45,
+  "prediction_horizon": 10,
+  "atr_label_multiplier": 0.75,
+  "available_targets": [
+    "target",
+    "target_binary",
+    "target_return_horizon",
+    "target_future_range_high_pct",
+    "target_future_range_low_pct",
+    "target_breakout",
+    "target_breakdown",
+    "target_reversal",
+    "target_volatility_expansion",
+    "target_risk_adjusted_return",
+    "target_strategy_breakout_long_success",
+    "target_strategy_breakdown_short_success",
+    "target_strategy_pullback_continuation_success",
+    "target_strategy_mean_reversion_long_success",
+    "target_strategy_squeeze_breakout_success",
+    "target_strategy_vwap_reclaim_success",
+    "target_strategy_rsi_divergence_short_success",
+    "target_strategy_breakout_long_return_pct",
+    "target_strategy_breakdown_short_return_pct",
+    "target_strategy_pullback_continuation_return_pct",
+    "target_strategy_mean_reversion_long_return_pct",
+    "target_strategy_squeeze_breakout_return_pct",
+    "target_strategy_vwap_reclaim_return_pct",
+    "target_strategy_rsi_divergence_short_return_pct",
+    "target_strategy_breakout_long_mfe_pct",
+    "target_strategy_breakdown_short_mfe_pct",
+    "target_strategy_pullback_continuation_mfe_pct",
+    "target_strategy_mean_reversion_long_mfe_pct",
+    "target_strategy_squeeze_breakout_mfe_pct",
+    "target_strategy_vwap_reclaim_mfe_pct",
+    "target_strategy_rsi_divergence_short_mfe_pct",
+    "target_strategy_breakout_long_mae_pct",
+    "target_strategy_breakdown_short_mae_pct",
+    "target_strategy_pullback_continuation_mae_pct",
+    "target_strategy_mean_reversion_long_mae_pct",
+    "target_strategy_squeeze_breakout_mae_pct",
+    "target_strategy_vwap_reclaim_mae_pct",
+    "target_strategy_rsi_divergence_short_mae_pct",
+    "target_strategy_breakout_long_risk_reward",
+    "target_strategy_breakdown_short_risk_reward",
+    "target_strategy_pullback_continuation_risk_reward",
+    "target_strategy_mean_reversion_long_risk_reward",
+    "target_strategy_squeeze_breakout_risk_reward",
+    "target_strategy_vwap_reclaim_risk_reward",
+    "target_strategy_rsi_divergence_short_risk_reward",
+    "target_high_quality_strategy_active",
+    "target_high_quality_strategy_success",
+    "target_high_quality_strategy_return_pct",
+    "target_high_quality_strategy_risk_reward",
+    "target_high_quality_strategy_count",
+    "target_specialist_breakout_long_success",
+    "target_specialist_mean_reversion_long_success",
+    "target_specialist_breakout_long_return_pct",
+    "target_specialist_breakout_long_risk_reward",
+    "target_specialist_mean_reversion_long_return_pct",
+    "target_specialist_mean_reversion_long_risk_reward",
+    "target_elite_breakout_long_quality_success",
+    "target_elite_mean_reversion_long_quality_success",
+    "target_elite_breakout_long_return_positive",
+    "target_elite_mean_reversion_long_return_positive",
+    "target_elite_strategy_active",
+    "target_elite_strategy_quality_success",
+    "target_elite_strategy_return_pct",
+    "target_elite_strategy_risk_reward",
+    "target_elite_strategy_count",
+    "target_elite_breakout_long_quality_success",
+    "target_elite_breakout_long_return_positive",
+    "target_elite_mean_reversion_long_quality_success",
+    "target_elite_mean_reversion_long_return_positive",
+    "target_elite_strategy_quality_success",
+    "target_elite_breakout_long_return_pct",
+    "target_elite_breakout_long_risk_reward",
+    "target_elite_mean_reversion_long_return_pct",
+    "target_elite_mean_reversion_long_risk_reward",
+    "target_elite_strategy_return_pct",
+    "target_elite_strategy_risk_reward"
+  ],
+  "best_params": {
+    "xgboost": {
+      "n_estimators": 977,
+      "max_depth": 7,
+      "learning_rate": 0.13981432416676848,
+      "subsample": 0.5080946229023925,
+      "colsample_bytree": 0.7243642934534201,
+      "min_child_weight": 8,
+      "gamma": 0.4369488626704315,
+      "reg_alpha": 0.9592557418944082,
+      "reg_lambda": 2.0571413134554684
+    }
+  },
+  "raw_optuna_params": {
+    "xgboost": {
+      "xgb_n_est": 977,
+      "xgb_depth": 7,
+      "xgb_lr": 0.13981432416676848,
+      "xgb_sub": 0.5080946229023925,
+      "xgb_col": 0.7243642934534201,
+      "xgb_mcw": 8,
+      "xgb_gamma": 0.4369488626704315,
+      "xgb_alpha": 0.9592557418944082,
+      "xgb_lam": 2.0571413134554684
+    }
+  },
+  "cv_f1_macro": {
+    "xgboost": 0.3214968712535964
+  },
+  "holdout_metrics": {
+    "accuracy": 0.3729508196721312,
+    "f1_macro": 0.337546527872201,
+    "precision_macro": 0.35038728653277,
+    "recall_macro": 0.34581658265761733,
+    "return_proxy_mae": 0.05208249248468127,
+    "return_proxy_rmse": 0.08023801960439432,
+    "test_rows": 7076,
+    "class_counts": {
+      "bullish": 2936,
+      "bearish": 2169,
+      "sideways": 1971
+    },
+    "confidence_buckets": {
+      ">=60%": {
+        "accuracy": 0.3955723856685115,
+        "coverage": 0.48516110797060485,
+        "signals": 3433
+      },
+      ">=70%": {
+        "accuracy": 0.39598629466470875,
+        "coverage": 0.2887224420576597,
+        "signals": 2043
+      },
+      ">=80%": {
+        "accuracy": 0.40609137055837563,
+        "coverage": 0.13920293951384963,
+        "signals": 985
+      },
+      ">=85%": {
+        "accuracy": 0.4272890484739677,
+        "coverage": 0.0787167891464104,
+        "signals": 557
+      }
+    }
+  },
+  "binary_high_confidence": {
+    "artifact": "model_20260516_035229_binary_direction.joblib",
+    "target": "forward_return > 0 over prediction_horizon",
+    "all_signal_accuracy": 0.5015545505935557,
+    "f1": 0.5518993774615678,
+    "precision": 0.5466901585703499,
+    "recall": 0.5572088250384812,
+    "test_rows": 7076,
+    "class_counts": {
+      "up": 3898,
+      "down_or_flat": 3178
+    },
+    "confidence_buckets": {
+      ">=60%": {
+        "accuracy": 0.5028581326866447,
+        "coverage": 0.815856416054268,
+        "signals": 5773
+      },
+      ">=70%": {
+        "accuracy": 0.5042316258351893,
+        "coverage": 0.6345392877331826,
+        "signals": 4490
+      },
+      ">=80%": {
+        "accuracy": 0.5033025099075297,
+        "coverage": 0.42792538157150933,
+        "signals": 3028
+      },
+      ">=85%": {
+        "accuracy": 0.5041466608467918,
+        "coverage": 0.3237704918032787,
+        "signals": 2291
+      }
+    },
+    "proof_rule": "Only claim 75%+ accuracy for confidence buckets whose measured walk-forward accuracy is >= 0.75 and whose coverage is disclosed."
+  },
+  "auxiliary_target_models": {
+    "artifact": "model_20260516_035229_auxiliary_targets.joblib",
+    "classification_targets": [
+      "target_breakout",
+      "target_breakdown",
+      "target_reversal",
+      "target_volatility_expansion",
+      "target_strategy_breakout_long_success",
+      "target_strategy_breakdown_short_success",
+      "target_strategy_pullback_continuation_success",
+      "target_strategy_mean_reversion_long_success",
+      "target_strategy_squeeze_breakout_success",
+      "target_strategy_vwap_reclaim_success",
+      "target_strategy_rsi_divergence_short_success",
+      "target_high_quality_strategy_success",
+      "target_specialist_breakout_long_success",
+      "target_specialist_mean_reversion_long_success",
+      "target_elite_breakout_long_quality_success",
+      "target_elite_breakout_long_return_positive",
+      "target_elite_mean_reversion_long_quality_success",
+      "target_elite_mean_reversion_long_return_positive",
+      "target_elite_strategy_quality_success"
+    ],
+    "regression_targets": [
+      "target_return_horizon",
+      "target_future_range_high_pct",
+      "target_future_range_low_pct",
+      "target_risk_adjusted_return",
+      "target_strategy_breakout_long_return_pct",
+      "target_strategy_breakdown_short_return_pct",
+      "target_strategy_pullback_continuation_return_pct",
+      "target_strategy_mean_reversion_long_return_pct",
+      "target_strategy_squeeze_breakout_return_pct",
+      "target_strategy_vwap_reclaim_return_pct",
+      "target_strategy_rsi_divergence_short_return_pct",
+      "target_strategy_breakout_long_risk_reward",
+      "target_strategy_breakdown_short_risk_reward",
+      "target_strategy_pullback_continuation_risk_reward",
+      "target_strategy_mean_reversion_long_risk_reward",
+      "target_strategy_squeeze_breakout_risk_reward",
+      "target_strategy_vwap_reclaim_risk_reward",
+      "target_strategy_rsi_divergence_short_risk_reward",
+      "target_high_quality_strategy_return_pct",
+      "target_high_quality_strategy_risk_reward",
+      "target_specialist_breakout_long_return_pct",
+      "target_specialist_breakout_long_risk_reward",
+      "target_specialist_mean_reversion_long_return_pct",
+      "target_specialist_mean_reversion_long_risk_reward",
+      "target_elite_breakout_long_return_pct",
+      "target_elite_breakout_long_risk_reward",
+      "target_elite_mean_reversion_long_return_pct",
+      "target_elite_mean_reversion_long_risk_reward",
+      "target_elite_strategy_return_pct",
+      "target_elite_strategy_risk_reward"
+    ],
+    "strategy_definitions": [
+      {
+        "id": "breakout_long",
+        "label": "Breakout long",
+        "setup": "setup_breakout_long",
+        "target": "target_strategy_breakout_long_success",
+        "direction": "long"
+      },
+      {
+        "id": "breakdown_short",
+        "label": "Breakdown short",
+        "setup": "setup_breakdown_short",
+        "target": "target_strategy_breakdown_short_success",
+        "direction": "short"
+      },
+      {
+        "id": "pullback_continuation",
+        "label": "Pullback continuation",
+        "setup": "setup_pullback_continuation",
+        "target": "target_strategy_pullback_continuation_success",
+        "direction": "long"
+      },
+      {
+        "id": "mean_reversion_long",
+        "label": "Mean reversion long",
+        "setup": "setup_mean_reversion_long",
+        "target": "target_strategy_mean_reversion_long_success",
+        "direction": "long"
+      },
+      {
+        "id": "squeeze_breakout",
+        "label": "Squeeze breakout",
+        "setup": "setup_squeeze_breakout",
+        "target": "target_strategy_squeeze_breakout_success",
+        "direction": "long"
+      },
+      {
+        "id": "vwap_reclaim",
+        "label": "VWAP reclaim",
+        "setup": "setup_vwap_reclaim",
+        "target": "target_strategy_vwap_reclaim_success",
+        "direction": "long"
+      },
+      {
+        "id": "rsi_divergence_short",
+        "label": "RSI divergence short",
+        "setup": "setup_rsi_divergence_short",
+        "target": "target_strategy_rsi_divergence_short_success",
+        "direction": "short"
+      }
+    ],
+    "high_quality_strategy_ids": [
+      "breakout_long",
+      "mean_reversion_long",
+      "squeeze_breakout",
+      "vwap_reclaim"
+    ],
+    "specialist_strategy_ids": [
+      "breakout_long",
+      "mean_reversion_long",
+      "vwap_reclaim"
+    ],
+    "elite_strategy_ids": [
+      "breakout_long",
+      "mean_reversion_long"
+    ],
+    "elite_trade_quality_rules": {
+      "minimum_return_pct": 0.01,
+      "minimum_risk_reward": 1.5,
+      "requires_target_before_stop": true
+    },
+    "strategy_quality": {
+      "breakout_long": {
+        "label": "Breakout long",
+        "direction": "long",
+        "signal_count": 98,
+        "coverage": 0.013849632560768797,
+        "win_rate": 0.2857142857142857,
+        "avg_return": 0.03483356811683954,
+        "median_return": 0.009233121046108406,
+        "avg_win": 0.09213085790093854,
+        "avg_loss": -0.03845366300235682,
+        "profit_factor": 3.0645141655906754,
+        "max_drawdown": -0.4411478002073089,
+        "sharpe": 1.6297971846713608,
+        "avg_mfe": 0.08437533395864899,
+        "avg_mae": -0.0422589769453043,
+        "avg_risk_reward": 3.098889843218069,
+        "target_hit_rate": 0.6122448979591837,
+        "stop_hit_rate": 0.6836734693877551
+      },
+      "breakdown_short": {
+        "label": "Breakdown short",
+        "direction": "short",
+        "signal_count": 76,
+        "coverage": 0.010740531373657434,
+        "win_rate": 0.18421052631578946,
+        "avg_return": -0.02903092590031945,
+        "median_return": -0.024305666716197716,
+        "avg_win": 0.04801519258420786,
+        "avg_loss": -0.06909490751227365,
+        "profit_factor": 0.3613565896929947,
+        "max_drawdown": -0.9050519480540958,
+        "sharpe": -1.8244107385382193,
+        "avg_mfe": 0.039346356453613264,
+        "avg_mae": -0.07195740075984655,
+        "avg_risk_reward": 1.7548322704110904,
+        "target_hit_rate": 0.4473684210526316,
+        "stop_hit_rate": 0.8026315789473685
+      },
+      "pullback_continuation": {
+        "label": "Pullback continuation",
+        "direction": "long",
+        "signal_count": 46,
+        "coverage": 0.006500847936687394,
+        "win_rate": 0.08695652173913043,
+        "avg_return": -0.014228928050576876,
+        "median_return": -0.012726571521738006,
+        "avg_win": 0.03951066713095113,
+        "avg_loss": -0.035399071606936394,
+        "profit_factor": 0.4396953806172172,
+        "max_drawdown": -0.5170306758140111,
+        "sharpe": -1.5449148095418948,
+        "avg_mfe": 0.03529113750574558,
+        "avg_mae": -0.05454000451314337,
+        "avg_risk_reward": 1.4544718106615053,
+        "target_hit_rate": 0.13043478260869565,
+        "stop_hit_rate": 0.782608695652174
+      },
+      "mean_reversion_long": {
+        "label": "Mean reversion long",
+        "direction": "long",
+        "signal_count": 769,
+        "coverage": 0.10867721876766535,
+        "win_rate": 0.46293888166449937,
+        "avg_return": 0.020262943365414218,
+        "median_return": 0.015973580699953027,
+        "avg_win": 0.058472930453249895,
+        "avg_loss": -0.04760461492778128,
+        "profit_factor": 2.1816804344682494,
+        "max_drawdown": -0.9574103873829034,
+        "sharpe": 1.3453389905114483,
+        "avg_mfe": 0.05956141081432616,
+        "avg_mae": -0.03823449333246869,
+        "avg_risk_reward": 3.5366124699566712,
+        "target_hit_rate": 0.7269180754226268,
+        "stop_hit_rate": 0.5162548764629389
+      },
+      "squeeze_breakout": {
+        "label": "Squeeze breakout",
+        "direction": "long",
+        "signal_count": 72,
+        "coverage": 0.010175240248728096,
+        "win_rate": 0.2777777777777778,
+        "avg_return": 0.011717053642280727,
+        "median_return": -0.0008770044207582761,
+        "avg_win": 0.0672815776438382,
+        "avg_loss": -0.04084398257540878,
+        "profit_factor": 1.558240200781869,
+        "max_drawdown": -0.4864954828007729,
+        "sharpe": 0.6596191093479074,
+        "avg_mfe": 0.05439451741519495,
+        "avg_mae": -0.04723456045685855,
+        "avg_risk_reward": 2.8287021107395685,
+        "target_hit_rate": 0.4583333333333333,
+        "stop_hit_rate": 0.7222222222222222
+      },
+      "vwap_reclaim": {
+        "label": "VWAP reclaim",
+        "direction": "long",
+        "signal_count": 213,
+        "coverage": 0.030101752402487282,
+        "win_rate": 0.2863849765258216,
+        "avg_return": 0.024221405090668356,
+        "median_return": 0.0020317699096796815,
+        "avg_win": 0.08352318464737048,
+        "avg_loss": -0.03911059249415913,
+        "profit_factor": 2.2806997259857846,
+        "max_drawdown": -0.866051850810197,
+        "sharpe": 1.1784896169455377,
+        "avg_mfe": 0.06685143483082998,
+        "avg_mae": -0.04393457234756716,
+        "avg_risk_reward": 2.675369066371111,
+        "target_hit_rate": 0.41784037558685444,
+        "stop_hit_rate": 0.6713615023474179
+      },
+      "rsi_divergence_short": {
+        "label": "RSI divergence short",
+        "direction": "short",
+        "signal_count": 260,
+        "coverage": 0.03674392312040701,
+        "win_rate": 0.16538461538461538,
+        "avg_return": -0.022237393801719425,
+        "median_return": -0.012503816009252322,
+        "avg_win": 0.038248425649712064,
+        "avg_loss": -0.06256127343600709,
+        "profit_factor": 0.40758362214643595,
+        "max_drawdown": -0.9988226948544695,
+        "sharpe": -1.4597624637790403,
+        "avg_mfe": 0.03559639287922214,
+        "avg_mae": -0.0634604577783355,
+        "avg_risk_reward": 2.009589121329705,
+        "target_hit_rate": 0.24615384615384617,
+        "stop_hit_rate": 0.7538461538461538
+      }
+    },
+    "metrics": {
+      "classification": {
+        "target_breakout": {
+          "accuracy": 0.7080271339739966,
+          "f1": 0.6711238459089462,
+          "precision": 0.6882141691152465,
+          "recall": 0.6548617583100341,
+          "positive_rate": 0.43287167891464107,
+          "class_counts": {
+            "0": 3857,
+            "1": 3219
+          },
+          "confidence_buckets": {
+            ">=60%": {
+              "accuracy": 0.7288998611325412,
+              "coverage": 0.9159129451667609,
+              "signals": 6481
+            },
+            ">=70%": {
+              "accuracy": 0.7487489214840379,
+              "coverage": 0.8189655172413793,
+              "signals": 5795
+            },
+            ">=80%": {
+              "accuracy": 0.7702649268485567,
+              "coverage": 0.7148106274731487,
+              "signals": 5058
+            },
+            ">=85%": {
+              "accuracy": 0.782141290039491,
+              "coverage": 0.6441492368569813,
+              "signals": 4558
+            }
+          }
+        },
+        "target_breakdown": {
+          "accuracy": 0.7752967778405879,
+          "f1": 0.6449307726663689,
+          "precision": 0.63668430335097,
+          "recall": 0.653393665158371,
+          "positive_rate": 0.320520067834935,
+          "class_counts": {
+            "0": 4866,
+            "1": 2210
+          },
+          "confidence_buckets": {
+            ">=60%": {
+              "accuracy": 0.7970479704797048,
+              "coverage": 0.9191633691351045,
+              "signals": 6504
+            },
+            ">=70%": {
+              "accuracy": 0.8205822613405552,
+              "coverage": 0.8349349915206331,
+              "signals": 5908
+            },
+            ">=80%": {
+              "accuracy": 0.845933014354067,
+              "coverage": 0.7384115319389486,
+              "signals": 5225
+            },
+            ">=85%": {
+              "accuracy": 0.8608279592261285,
+              "coverage": 0.6793386093838327,
+              "signals": 4807
+            }
+          }
+        },
+        "target_reversal": {
+          "accuracy": 0.7156585641605426,
+          "f1": 0.38546120952962737,
+          "precision": 0.4663710273466371,
+          "recall": 0.32847475273295157,
+          "positive_rate": 0.1912097230073488,
+          "class_counts": {
+            "0": 5155,
+            "1": 1921
+          },
+          "confidence_buckets": {
+            ">=60%": {
+              "accuracy": 0.7384012539184953,
+              "coverage": 0.9016393442622951,
+              "signals": 6380
+            },
+            ">=70%": {
+              "accuracy": 0.7638226461755874,
+              "coverage": 0.8000282645562464,
+              "signals": 5661
+            },
+            ">=80%": {
+              "accuracy": 0.7957775919732442,
+              "coverage": 0.676088185415489,
+              "signals": 4784
+            },
+            ">=85%": {
+              "accuracy": 0.8163980378416258,
+              "coverage": 0.6050028264556246,
+              "signals": 4281
+            }
+          }
+        },
+        "target_volatility_expansion": {
+          "accuracy": 0.71791972866026,
+          "f1": 0.5731394354148845,
+          "precision": 0.5581007913369429,
+          "recall": 0.589010989010989,
+          "positive_rate": 0.3393159977388355,
+          "class_counts": {
+            "0": 4801,
+            "1": 2275
+          },
+          "confidence_buckets": {
+            ">=60%": {
+              "accuracy": 0.7345898346979762,
+              "coverage": 0.9147823629169022,
+              "signals": 6473
+            },
+            ">=70%": {
+              "accuracy": 0.7546391752577319,
+              "coverage": 0.8224985867721877,
+              "signals": 5820
+            },
+            ">=80%": {
+              "accuracy": 0.7812998405103668,
+              "coverage": 0.7088750706613907,
+              "signals": 5016
+            },
+            ">=85%": {
+              "accuracy": 0.7966996699669967,
+              "coverage": 0.642312040700961,
+              "signals": 4545
+            }
+          }
+        }
+      },
+      "regression": {
+        "target_return_horizon": {
+          "mae": 0.05017912003168222,
+          "rmse": 0.07744952249477259,
+          "directional_accuracy": 0.5563877897117016,
+          "prediction_mean": 0.005471590924166367,
+          "actual_mean": 0.014431714433702017
+        },
+        "target_future_range_high_pct": {
+          "mae": 0.03850034388165684,
+          "rmse": 0.06632131260791238,
+          "directional_accuracy": 0.9619841718485019,
+          "prediction_mean": 0.04830354349261256,
+          "actual_mean": 0.05557913859133107
+        },
+        "target_future_range_low_pct": {
+          "mae": 0.02791901622290695,
+          "rmse": 0.03787927655987904,
+          "directional_accuracy": 0.9289146410401357,
+          "prediction_mean": -0.04322909316813511,
+          "actual_mean": -0.04012989648458498
+        },
+        "target_risk_adjusted_return": {
+          "mae": 2.0944422276060277,
+          "rmse": 2.8178297534607935,
+          "directional_accuracy": 0.5145562464669304,
+          "prediction_mean": 0.40239485747314196,
+          "actual_mean": 0.5055167315835389
+        }
+      },
+      "strategy_classification": {
+        "target_strategy_breakout_long_success": {
+          "accuracy": 0.6428571428571429,
+          "f1": 0.3137254901960784,
+          "precision": 0.34782608695652173,
+          "recall": 0.2857142857142857,
+          "positive_rate": 0.23469387755102042,
+          "class_counts": {
+            "0": 70,
+            "1": 28
+          },
+          "confidence_buckets": {
+            ">=60%": {
+              "accuracy": 0.6794871794871795,
+              "coverage": 0.7959183673469388,
+              "signals": 78
+            },
+            ">=70%": {
+              "accuracy": 0.660377358490566,
+              "coverage": 0.5408163265306123,
+              "signals": 53
+            },
+            ">=80%": {
+              "accuracy": 0.6785714285714286,
+              "coverage": 0.2857142857142857,
+              "signals": 28
+            },
+            ">=85%": {
+              "accuracy": 0.6666666666666666,
+              "coverage": 0.21428571428571427,
+              "signals": 21
+            }
+          },
+          "strategy_id": "breakout_long",
+          "setup": "setup_breakout_long",
+          "train_active_rows": 361,
+          "test_active_rows": 98,
+          "setup_coverage_test": 0.013849632560768797,
+          "baseline_win_rate_test": 0.2857142857142857
+        },
+        "target_strategy_breakdown_short_success": {
+          "accuracy": 0.7105263157894737,
+          "f1": 0.15384615384615385,
+          "precision": 0.16666666666666666,
+          "recall": 0.14285714285714285,
+          "positive_rate": 0.15789473684210525,
+          "class_counts": {
+            "0": 62,
+            "1": 14
+          },
+          "confidence_buckets": {
+            ">=60%": {
+              "accuracy": 0.7777777777777778,
+              "coverage": 0.8289473684210527,
+              "signals": 63
+            },
+            ">=70%": {
+              "accuracy": 0.8148148148148148,
+              "coverage": 0.7105263157894737,
+              "signals": 54
+            },
+            ">=80%": {
+              "accuracy": 0.8,
+              "coverage": 0.5263157894736842,
+              "signals": 40
+            },
+            ">=85%": {
+              "accuracy": 0.8285714285714286,
+              "coverage": 0.4605263157894737,
+              "signals": 35
+            }
+          },
+          "strategy_id": "breakdown_short",
+          "setup": "setup_breakdown_short",
+          "train_active_rows": 393,
+          "test_active_rows": 76,
+          "setup_coverage_test": 0.010740531373657434,
+          "baseline_win_rate_test": 0.18421052631578946
+        },
+        "target_strategy_pullback_continuation_success": {
+          "skipped": true,
+          "reason": "Not enough active setup rows or class variety in chronological train/test split.",
+          "strategy_id": "pullback_continuation",
+          "setup": "setup_pullback_continuation",
+          "train_active_rows": 0,
+          "test_active_rows": 46,
+          "setup_coverage_test": 0.006500847936687394,
+          "train_counts": {},
+          "test_counts": {
+            "0": 42,
+            "1": 4
+          }
+        },
+        "target_strategy_mean_reversion_long_success": {
+          "accuracy": 0.49154746423927176,
+          "f1": 0.36006546644844517,
+          "precision": 0.43137254901960786,
+          "recall": 0.3089887640449438,
+          "positive_rate": 0.33159947984395316,
+          "class_counts": {
+            "0": 413,
+            "1": 356
+          },
+          "confidence_buckets": {
+            ">=60%": {
+              "accuracy": 0.5007385524372231,
+              "coverage": 0.8803641092327699,
+              "signals": 677
+            },
+            ">=70%": {
+              "accuracy": 0.5060449050086355,
+              "coverage": 0.752925877763329,
+              "signals": 579
+            },
+            ">=80%": {
+              "accuracy": 0.5046511627906977,
+              "coverage": 0.5591677503250976,
+              "signals": 430
+            },
+            ">=85%": {
+              "accuracy": 0.5285714285714286,
+              "coverage": 0.45513654096228867,
+              "signals": 350
+            }
+          },
+          "strategy_id": "mean_reversion_long",
+          "setup": "setup_mean_reversion_long",
+          "train_active_rows": 3953,
+          "test_active_rows": 769,
+          "setup_coverage_test": 0.10867721876766535,
+          "baseline_win_rate_test": 0.46293888166449937
+        },
+        "target_strategy_squeeze_breakout_success": {
+          "accuracy": 0.6666666666666666,
+          "f1": 0.3684210526315789,
+          "precision": 0.3888888888888889,
+          "recall": 0.35,
+          "positive_rate": 0.25,
+          "class_counts": {
+            "0": 52,
+            "1": 20
+          },
+          "confidence_buckets": {
+            ">=60%": {
+              "accuracy": 0.631578947368421,
+              "coverage": 0.7916666666666666,
+              "signals": 57
+            },
+            ">=70%": {
+              "accuracy": 0.64,
+              "coverage": 0.6944444444444444,
+              "signals": 50
+            },
+            ">=80%": {
+              "accuracy": 0.6388888888888888,
+              "coverage": 0.5,
+              "signals": 36
+            },
+            ">=85%": {
+              "accuracy": 0.7142857142857143,
+              "coverage": 0.3888888888888889,
+              "signals": 28
+            }
+          },
+          "strategy_id": "squeeze_breakout",
+          "setup": "setup_squeeze_breakout",
+          "train_active_rows": 388,
+          "test_active_rows": 72,
+          "setup_coverage_test": 0.010175240248728096,
+          "baseline_win_rate_test": 0.2777777777777778
+        },
+        "target_strategy_vwap_reclaim_success": {
+          "skipped": true,
+          "reason": "Not enough active setup rows or class variety in chronological train/test split.",
+          "strategy_id": "vwap_reclaim",
+          "setup": "setup_vwap_reclaim",
+          "train_active_rows": 0,
+          "test_active_rows": 213,
+          "setup_coverage_test": 0.030101752402487282,
+          "train_counts": {},
+          "test_counts": {
+            "0": 152,
+            "1": 61
+          }
+        },
+        "target_strategy_rsi_divergence_short_success": {
+          "accuracy": 0.7192307692307692,
+          "f1": 0.16091954022988506,
+          "precision": 0.1590909090909091,
+          "recall": 0.16279069767441862,
+          "positive_rate": 0.16923076923076924,
+          "class_counts": {
+            "0": 217,
+            "1": 43
+          },
+          "confidence_buckets": {
+            ">=60%": {
+              "accuracy": 0.7531914893617021,
+              "coverage": 0.9038461538461539,
+              "signals": 235
+            },
+            ">=70%": {
+              "accuracy": 0.765,
+              "coverage": 0.7692307692307693,
+              "signals": 200
+            },
+            ">=80%": {
+              "accuracy": 0.7974683544303798,
+              "coverage": 0.6076923076923076,
+              "signals": 158
+            },
+            ">=85%": {
+              "accuracy": 0.8394160583941606,
+              "coverage": 0.5269230769230769,
+              "signals": 137
+            }
+          },
+          "strategy_id": "rsi_divergence_short",
+          "setup": "setup_rsi_divergence_short",
+          "train_active_rows": 1206,
+          "test_active_rows": 260,
+          "setup_coverage_test": 0.03674392312040701,
+          "baseline_win_rate_test": 0.16538461538461538
+        }
+      },
+      "strategy_regression": {
+        "target_strategy_breakout_long_return_pct": {
+          "mae": 0.06805770267492867,
+          "rmse": 0.10987397364374678,
+          "directional_accuracy": 0.5612244897959183,
+          "prediction_mean": 0.008788952603936195,
+          "actual_mean": 0.03483356811683954,
+          "strategy_id": "breakout_long",
+          "setup": "setup_breakout_long",
+          "train_active_rows": 361,
+          "test_active_rows": 98,
+          "setup_coverage_test": 0.013849632560768797
+        },
+        "target_strategy_breakout_long_risk_reward": {
+          "mae": 3.2751874058297084,
+          "rmse": 3.972093338803612,
+          "directional_accuracy": 0.9285714285714286,
+          "prediction_mean": 3.2172105091110783,
+          "actual_mean": 3.098889843218069,
+          "strategy_id": "breakout_long",
+          "setup": "setup_breakout_long",
+          "train_active_rows": 361,
+          "test_active_rows": 98,
+          "setup_coverage_test": 0.013849632560768797
+        },
+        "target_strategy_breakdown_short_return_pct": {
+          "mae": 0.05811236291079911,
+          "rmse": 0.08059847594707856,
+          "directional_accuracy": 0.6578947368421053,
+          "prediction_mean": -0.014915542677044868,
+          "actual_mean": -0.02903092590031945,
+          "strategy_id": "breakdown_short",
+          "setup": "setup_breakdown_short",
+          "train_active_rows": 393,
+          "test_active_rows": 76,
+          "setup_coverage_test": 0.010740531373657434
+        },
+        "target_strategy_breakdown_short_risk_reward": {
+          "mae": 2.4607945634933452,
+          "rmse": 3.2603440797855,
+          "directional_accuracy": 0.881578947368421,
+          "prediction_mean": 2.094383151858653,
+          "actual_mean": 1.7548322704110904,
+          "strategy_id": "breakdown_short",
+          "setup": "setup_breakdown_short",
+          "train_active_rows": 393,
+          "test_active_rows": 76,
+          "setup_coverage_test": 0.010740531373657434
+        },
+        "target_strategy_pullback_continuation_return_pct": {
+          "skipped": true,
+          "reason": "Not enough active setup rows or target variation in chronological train/test split.",
+          "strategy_id": "pullback_continuation",
+          "setup": "setup_pullback_continuation",
+          "train_active_rows": 0,
+          "test_active_rows": 46,
+          "setup_coverage_test": 0.006500847936687394
+        },
+        "target_strategy_pullback_continuation_risk_reward": {
+          "skipped": true,
+          "reason": "Not enough active setup rows or target variation in chronological train/test split.",
+          "strategy_id": "pullback_continuation",
+          "setup": "setup_pullback_continuation",
+          "train_active_rows": 0,
+          "test_active_rows": 46,
+          "setup_coverage_test": 0.006500847936687394
+        },
+        "target_strategy_mean_reversion_long_return_pct": {
+          "mae": 0.05278599463323182,
+          "rmse": 0.0765736239910509,
+          "directional_accuracy": 0.6397919375812744,
+          "prediction_mean": 0.0078413225710392,
+          "actual_mean": 0.020262943365414218,
+          "strategy_id": "mean_reversion_long",
+          "setup": "setup_mean_reversion_long",
+          "train_active_rows": 3953,
+          "test_active_rows": 769,
+          "setup_coverage_test": 0.10867721876766535
+        },
+        "target_strategy_mean_reversion_long_risk_reward": {
+          "mae": 3.45928988410712,
+          "rmse": 4.177344892381229,
+          "directional_accuracy": 0.9505851755526658,
+          "prediction_mean": 3.239885404512228,
+          "actual_mean": 3.5366124699566712,
+          "strategy_id": "mean_reversion_long",
+          "setup": "setup_mean_reversion_long",
+          "train_active_rows": 3953,
+          "test_active_rows": 769,
+          "setup_coverage_test": 0.10867721876766535
+        },
+        "target_strategy_squeeze_breakout_return_pct": {
+          "mae": 0.05440439194162648,
+          "rmse": 0.08862975396517084,
+          "directional_accuracy": 0.4861111111111111,
+          "prediction_mean": 0.0079570971429348,
+          "actual_mean": 0.011717053642280727,
+          "strategy_id": "squeeze_breakout",
+          "setup": "setup_squeeze_breakout",
+          "train_active_rows": 388,
+          "test_active_rows": 72,
+          "setup_coverage_test": 0.010175240248728096
+        },
+        "target_strategy_squeeze_breakout_risk_reward": {
+          "mae": 3.461142825625494,
+          "rmse": 4.001395115961824,
+          "directional_accuracy": 0.9305555555555556,
+          "prediction_mean": 3.3582486580643387,
+          "actual_mean": 2.8287021107395685,
+          "strategy_id": "squeeze_breakout",
+          "setup": "setup_squeeze_breakout",
+          "train_active_rows": 388,
+          "test_active_rows": 72,
+          "setup_coverage_test": 0.010175240248728096
+        },
+        "target_strategy_vwap_reclaim_return_pct": {
+          "skipped": true,
+          "reason": "Not enough active setup rows or target variation in chronological train/test split.",
+          "strategy_id": "vwap_reclaim",
+          "setup": "setup_vwap_reclaim",
+          "train_active_rows": 0,
+          "test_active_rows": 213,
+          "setup_coverage_test": 0.030101752402487282
+        },
+        "target_strategy_vwap_reclaim_risk_reward": {
+          "skipped": true,
+          "reason": "Not enough active setup rows or target variation in chronological train/test split.",
+          "strategy_id": "vwap_reclaim",
+          "setup": "setup_vwap_reclaim",
+          "train_active_rows": 0,
+          "test_active_rows": 213,
+          "setup_coverage_test": 0.030101752402487282
+        },
+        "target_strategy_rsi_divergence_short_return_pct": {
+          "mae": 0.052191712553009646,
+          "rmse": 0.07850538401192597,
+          "directional_accuracy": 0.6,
+          "prediction_mean": -0.0038625828456133604,
+          "actual_mean": -0.022237393801719425,
+          "strategy_id": "rsi_divergence_short",
+          "setup": "setup_rsi_divergence_short",
+          "train_active_rows": 1206,
+          "test_active_rows": 260,
+          "setup_coverage_test": 0.03674392312040701
+        },
+        "target_strategy_rsi_divergence_short_risk_reward": {
+          "mae": 3.0219635059594223,
+          "rmse": 3.6766204525831956,
+          "directional_accuracy": 0.8730769230769231,
+          "prediction_mean": 3.0875497656946,
+          "actual_mean": 2.009589121329705,
+          "strategy_id": "rsi_divergence_short",
+          "setup": "setup_rsi_divergence_short",
+          "train_active_rows": 1206,
+          "test_active_rows": 260,
+          "setup_coverage_test": 0.03674392312040701
+        }
+      },
+      "strategy_opportunity": {
+        "target_high_quality_strategy_success": {
+          "accuracy": 0.546916890080429,
+          "f1": 0.31393775372124494,
+          "precision": 0.41134751773049644,
+          "recall": 0.2538293216630197,
+          "positive_rate": 0.2520107238605898,
+          "class_counts": {
+            "0": 662,
+            "1": 457
+          },
+          "confidence_buckets": {
+            ">=60%": {
+              "accuracy": 0.5394736842105263,
+              "coverage": 0.8829311885612153,
+              "signals": 988
+            },
+            ">=70%": {
+              "accuracy": 0.5482717520858165,
+              "coverage": 0.7497765862377123,
+              "signals": 839
+            },
+            ">=80%": {
+              "accuracy": 0.5678627145085804,
+              "coverage": 0.5728328865058088,
+              "signals": 641
+            },
+            ">=85%": {
+              "accuracy": 0.5784499054820416,
+              "coverage": 0.4727435210008937,
+              "signals": 529
+            }
+          },
+          "target": "target_high_quality_strategy_success",
+          "active_filter": "target_high_quality_strategy_active",
+          "included_strategy_ids": [
+            "breakout_long",
+            "mean_reversion_long",
+            "squeeze_breakout",
+            "vwap_reclaim"
+          ],
+          "train_active_rows": 4653,
+          "test_active_rows": 1119,
+          "setup_coverage_test": 0.15814019219898248,
+          "baseline_win_rate_test": 0.40840035746201964,
+          "proof_rule": "Only claim high accuracy for disclosed confidence buckets and setup-filtered coverage."
+        },
+        "target_high_quality_strategy_return_pct": {
+          "mae": 0.055766458895004624,
+          "rmse": 0.08550135825470626,
+          "directional_accuracy": 0.6041108132260947,
+          "prediction_mean": 0.008323156274855137,
+          "actual_mean": 0.021648864257964837,
+          "target": "target_high_quality_strategy_return_pct",
+          "active_filter": "target_high_quality_strategy_active",
+          "included_strategy_ids": [
+            "breakout_long",
+            "mean_reversion_long",
+            "squeeze_breakout",
+            "vwap_reclaim"
+          ],
+          "train_active_rows": 4653,
+          "test_active_rows": 1119,
+          "setup_coverage_test": 0.15814019219898248
+        },
+        "target_high_quality_strategy_risk_reward": {
+          "mae": 3.2438659727737895,
+          "rmse": 3.9400802635516445,
+          "directional_accuracy": 0.9428060768543343,
+          "prediction_mean": 3.1366368529754687,
+          "actual_mean": 3.326022756688851,
+          "target": "target_high_quality_strategy_risk_reward",
+          "active_filter": "target_high_quality_strategy_active",
+          "included_strategy_ids": [
+            "breakout_long",
+            "mean_reversion_long",
+            "squeeze_breakout",
+            "vwap_reclaim"
+          ],
+          "train_active_rows": 4653,
+          "test_active_rows": 1119,
+          "setup_coverage_test": 0.15814019219898248
+        }
+      },
+      "specialist_strategies": {
+        "target_specialist_breakout_long_success": {
+          "accuracy": 0.6428571428571429,
+          "f1": 0.3137254901960784,
+          "precision": 0.34782608695652173,
+          "recall": 0.2857142857142857,
+          "positive_rate": 0.23469387755102042,
+          "class_counts": {
+            "0": 70,
+            "1": 28
+          },
+          "confidence_buckets": {
+            ">=60%": {
+              "accuracy": 0.6794871794871795,
+              "coverage": 0.7959183673469388,
+              "signals": 78
+            },
+            ">=70%": {
+              "accuracy": 0.660377358490566,
+              "coverage": 0.5408163265306123,
+              "signals": 53
+            },
+            ">=80%": {
+              "accuracy": 0.6785714285714286,
+              "coverage": 0.2857142857142857,
+              "signals": 28
+            },
+            ">=85%": {
+              "accuracy": 0.6666666666666666,
+              "coverage": 0.21428571428571427,
+              "signals": 21
+            }
+          },
+          "setup": "setup_breakout_long",
+          "train_active_rows": 361,
+          "test_active_rows": 98,
+          "setup_coverage_test": 0.013849632560768797,
+          "baseline_win_rate_test": 0.2857142857142857,
+          "strategy_id": "breakout_long",
+          "label": "Breakout long",
+          "source_target": "target_strategy_breakout_long_success",
+          "specialist_target": "target_specialist_breakout_long_success",
+          "strategy_quality": {
+            "label": "Breakout long",
+            "direction": "long",
+            "signal_count": 98,
+            "coverage": 0.013849632560768797,
+            "win_rate": 0.2857142857142857,
+            "avg_return": 0.03483356811683954,
+            "median_return": 0.009233121046108406,
+            "avg_win": 0.09213085790093854,
+            "avg_loss": -0.03845366300235682,
+            "profit_factor": 3.0645141655906754,
+            "max_drawdown": -0.4411478002073089,
+            "sharpe": 1.6297971846713608,
+            "avg_mfe": 0.08437533395864899,
+            "avg_mae": -0.0422589769453043,
+            "avg_risk_reward": 3.098889843218069,
+            "target_hit_rate": 0.6122448979591837,
+            "stop_hit_rate": 0.6836734693877551
+          },
+          "proof_rule": "Specialist accuracy is only valid on this setup's active rows and must disclose confidence threshold plus coverage."
+        },
+        "target_specialist_breakout_long_return_pct": {
+          "mae": 0.06805770267492867,
+          "rmse": 0.10987397364374678,
+          "directional_accuracy": 0.5612244897959183,
+          "prediction_mean": 0.008788952603936195,
+          "actual_mean": 0.03483356811683954,
+          "setup": "setup_breakout_long",
+          "train_active_rows": 361,
+          "test_active_rows": 98,
+          "setup_coverage_test": 0.013849632560768797,
+          "strategy_id": "breakout_long",
+          "label": "Breakout long",
+          "source_target": "target_strategy_breakout_long_return_pct",
+          "specialist_target": "target_specialist_breakout_long_return_pct",
+          "strategy_quality": {
+            "label": "Breakout long",
+            "direction": "long",
+            "signal_count": 98,
+            "coverage": 0.013849632560768797,
+            "win_rate": 0.2857142857142857,
+            "avg_return": 0.03483356811683954,
+            "median_return": 0.009233121046108406,
+            "avg_win": 0.09213085790093854,
+            "avg_loss": -0.03845366300235682,
+            "profit_factor": 3.0645141655906754,
+            "max_drawdown": -0.4411478002073089,
+            "sharpe": 1.6297971846713608,
+            "avg_mfe": 0.08437533395864899,
+            "avg_mae": -0.0422589769453043,
+            "avg_risk_reward": 3.098889843218069,
+            "target_hit_rate": 0.6122448979591837,
+            "stop_hit_rate": 0.6836734693877551
+          }
+        },
+        "target_specialist_breakout_long_risk_reward": {
+          "mae": 3.2751874058297084,
+          "rmse": 3.972093338803612,
+          "directional_accuracy": 0.9285714285714286,
+          "prediction_mean": 3.2172105091110783,
+          "actual_mean": 3.098889843218069,
+          "setup": "setup_breakout_long",
+          "train_active_rows": 361,
+          "test_active_rows": 98,
+          "setup_coverage_test": 0.013849632560768797,
+          "strategy_id": "breakout_long",
+          "label": "Breakout long",
+          "source_target": "target_strategy_breakout_long_risk_reward",
+          "specialist_target": "target_specialist_breakout_long_risk_reward",
+          "strategy_quality": {
+            "label": "Breakout long",
+            "direction": "long",
+            "signal_count": 98,
+            "coverage": 0.013849632560768797,
+            "win_rate": 0.2857142857142857,
+            "avg_return": 0.03483356811683954,
+            "median_return": 0.009233121046108406,
+            "avg_win": 0.09213085790093854,
+            "avg_loss": -0.03845366300235682,
+            "profit_factor": 3.0645141655906754,
+            "max_drawdown": -0.4411478002073089,
+            "sharpe": 1.6297971846713608,
+            "avg_mfe": 0.08437533395864899,
+            "avg_mae": -0.0422589769453043,
+            "avg_risk_reward": 3.098889843218069,
+            "target_hit_rate": 0.6122448979591837,
+            "stop_hit_rate": 0.6836734693877551
+          }
+        },
+        "target_specialist_mean_reversion_long_success": {
+          "accuracy": 0.49154746423927176,
+          "f1": 0.36006546644844517,
+          "precision": 0.43137254901960786,
+          "recall": 0.3089887640449438,
+          "positive_rate": 0.33159947984395316,
+          "class_counts": {
+            "0": 413,
+            "1": 356
+          },
+          "confidence_buckets": {
+            ">=60%": {
+              "accuracy": 0.5007385524372231,
+              "coverage": 0.8803641092327699,
+              "signals": 677
+            },
+            ">=70%": {
+              "accuracy": 0.5060449050086355,
+              "coverage": 0.752925877763329,
+              "signals": 579
+            },
+            ">=80%": {
+              "accuracy": 0.5046511627906977,
+              "coverage": 0.5591677503250976,
+              "signals": 430
+            },
+            ">=85%": {
+              "accuracy": 0.5285714285714286,
+              "coverage": 0.45513654096228867,
+              "signals": 350
+            }
+          },
+          "setup": "setup_mean_reversion_long",
+          "train_active_rows": 3953,
+          "test_active_rows": 769,
+          "setup_coverage_test": 0.10867721876766535,
+          "baseline_win_rate_test": 0.46293888166449937,
+          "strategy_id": "mean_reversion_long",
+          "label": "Mean reversion long",
+          "source_target": "target_strategy_mean_reversion_long_success",
+          "specialist_target": "target_specialist_mean_reversion_long_success",
+          "strategy_quality": {
+            "label": "Mean reversion long",
+            "direction": "long",
+            "signal_count": 769,
+            "coverage": 0.10867721876766535,
+            "win_rate": 0.46293888166449937,
+            "avg_return": 0.020262943365414218,
+            "median_return": 0.015973580699953027,
+            "avg_win": 0.058472930453249895,
+            "avg_loss": -0.04760461492778128,
+            "profit_factor": 2.1816804344682494,
+            "max_drawdown": -0.9574103873829034,
+            "sharpe": 1.3453389905114483,
+            "avg_mfe": 0.05956141081432616,
+            "avg_mae": -0.03823449333246869,
+            "avg_risk_reward": 3.5366124699566712,
+            "target_hit_rate": 0.7269180754226268,
+            "stop_hit_rate": 0.5162548764629389
+          },
+          "proof_rule": "Specialist accuracy is only valid on this setup's active rows and must disclose confidence threshold plus coverage."
+        },
+        "target_specialist_mean_reversion_long_return_pct": {
+          "mae": 0.05278599463323182,
+          "rmse": 0.0765736239910509,
+          "directional_accuracy": 0.6397919375812744,
+          "prediction_mean": 0.0078413225710392,
+          "actual_mean": 0.020262943365414218,
+          "setup": "setup_mean_reversion_long",
+          "train_active_rows": 3953,
+          "test_active_rows": 769,
+          "setup_coverage_test": 0.10867721876766535,
+          "strategy_id": "mean_reversion_long",
+          "label": "Mean reversion long",
+          "source_target": "target_strategy_mean_reversion_long_return_pct",
+          "specialist_target": "target_specialist_mean_reversion_long_return_pct",
+          "strategy_quality": {
+            "label": "Mean reversion long",
+            "direction": "long",
+            "signal_count": 769,
+            "coverage": 0.10867721876766535,
+            "win_rate": 0.46293888166449937,
+            "avg_return": 0.020262943365414218,
+            "median_return": 0.015973580699953027,
+            "avg_win": 0.058472930453249895,
+            "avg_loss": -0.04760461492778128,
+            "profit_factor": 2.1816804344682494,
+            "max_drawdown": -0.9574103873829034,
+            "sharpe": 1.3453389905114483,
+            "avg_mfe": 0.05956141081432616,
+            "avg_mae": -0.03823449333246869,
+            "avg_risk_reward": 3.5366124699566712,
+            "target_hit_rate": 0.7269180754226268,
+            "stop_hit_rate": 0.5162548764629389
+          }
+        },
+        "target_specialist_mean_reversion_long_risk_reward": {
+          "mae": 3.45928988410712,
+          "rmse": 4.177344892381229,
+          "directional_accuracy": 0.9505851755526658,
+          "prediction_mean": 3.239885404512228,
+          "actual_mean": 3.5366124699566712,
+          "setup": "setup_mean_reversion_long",
+          "train_active_rows": 3953,
+          "test_active_rows": 769,
+          "setup_coverage_test": 0.10867721876766535,
+          "strategy_id": "mean_reversion_long",
+          "label": "Mean reversion long",
+          "source_target": "target_strategy_mean_reversion_long_risk_reward",
+          "specialist_target": "target_specialist_mean_reversion_long_risk_reward",
+          "strategy_quality": {
+            "label": "Mean reversion long",
+            "direction": "long",
+            "signal_count": 769,
+            "coverage": 0.10867721876766535,
+            "win_rate": 0.46293888166449937,
+            "avg_return": 0.020262943365414218,
+            "median_return": 0.015973580699953027,
+            "avg_win": 0.058472930453249895,
+            "avg_loss": -0.04760461492778128,
+            "profit_factor": 2.1816804344682494,
+            "max_drawdown": -0.9574103873829034,
+            "sharpe": 1.3453389905114483,
+            "avg_mfe": 0.05956141081432616,
+            "avg_mae": -0.03823449333246869,
+            "avg_risk_reward": 3.5366124699566712,
+            "target_hit_rate": 0.7269180754226268,
+            "stop_hit_rate": 0.5162548764629389
+          }
+        },
+        "target_specialist_vwap_reclaim_success": {
+          "skipped": true,
+          "reason": "Not enough active setup rows or class variety in chronological train/test split.",
+          "setup": "setup_vwap_reclaim",
+          "train_active_rows": 0,
+          "test_active_rows": 213,
+          "setup_coverage_test": 0.030101752402487282,
+          "train_counts": {},
+          "test_counts": {
+            "0": 152,
+            "1": 61
+          },
+          "strategy_id": "vwap_reclaim",
+          "label": "VWAP reclaim",
+          "source_target": "target_strategy_vwap_reclaim_success",
+          "specialist_target": "target_specialist_vwap_reclaim_success",
+          "strategy_quality": {
+            "label": "VWAP reclaim",
+            "direction": "long",
+            "signal_count": 213,
+            "coverage": 0.030101752402487282,
+            "win_rate": 0.2863849765258216,
+            "avg_return": 0.024221405090668356,
+            "median_return": 0.0020317699096796815,
+            "avg_win": 0.08352318464737048,
+            "avg_loss": -0.03911059249415913,
+            "profit_factor": 2.2806997259857846,
+            "max_drawdown": -0.866051850810197,
+            "sharpe": 1.1784896169455377,
+            "avg_mfe": 0.06685143483082998,
+            "avg_mae": -0.04393457234756716,
+            "avg_risk_reward": 2.675369066371111,
+            "target_hit_rate": 0.41784037558685444,
+            "stop_hit_rate": 0.6713615023474179
+          },
+          "proof_rule": "Specialist accuracy is only valid on this setup's active rows and must disclose confidence threshold plus coverage."
+        },
+        "target_specialist_vwap_reclaim_return_pct": {
+          "skipped": true,
+          "reason": "Not enough active setup rows or target variation in chronological train/test split.",
+          "setup": "setup_vwap_reclaim",
+          "train_active_rows": 0,
+          "test_active_rows": 213,
+          "setup_coverage_test": 0.030101752402487282,
+          "strategy_id": "vwap_reclaim",
+          "label": "VWAP reclaim",
+          "source_target": "target_strategy_vwap_reclaim_return_pct",
+          "specialist_target": "target_specialist_vwap_reclaim_return_pct",
+          "strategy_quality": {
+            "label": "VWAP reclaim",
+            "direction": "long",
+            "signal_count": 213,
+            "coverage": 0.030101752402487282,
+            "win_rate": 0.2863849765258216,
+            "avg_return": 0.024221405090668356,
+            "median_return": 0.0020317699096796815,
+            "avg_win": 0.08352318464737048,
+            "avg_loss": -0.03911059249415913,
+            "profit_factor": 2.2806997259857846,
+            "max_drawdown": -0.866051850810197,
+            "sharpe": 1.1784896169455377,
+            "avg_mfe": 0.06685143483082998,
+            "avg_mae": -0.04393457234756716,
+            "avg_risk_reward": 2.675369066371111,
+            "target_hit_rate": 0.41784037558685444,
+            "stop_hit_rate": 0.6713615023474179
+          }
+        },
+        "target_specialist_vwap_reclaim_risk_reward": {
+          "skipped": true,
+          "reason": "Not enough active setup rows or target variation in chronological train/test split.",
+          "setup": "setup_vwap_reclaim",
+          "train_active_rows": 0,
+          "test_active_rows": 213,
+          "setup_coverage_test": 0.030101752402487282,
+          "strategy_id": "vwap_reclaim",
+          "label": "VWAP reclaim",
+          "source_target": "target_strategy_vwap_reclaim_risk_reward",
+          "specialist_target": "target_specialist_vwap_reclaim_risk_reward",
+          "strategy_quality": {
+            "label": "VWAP reclaim",
+            "direction": "long",
+            "signal_count": 213,
+            "coverage": 0.030101752402487282,
+            "win_rate": 0.2863849765258216,
+            "avg_return": 0.024221405090668356,
+            "median_return": 0.0020317699096796815,
+            "avg_win": 0.08352318464737048,
+            "avg_loss": -0.03911059249415913,
+            "profit_factor": 2.2806997259857846,
+            "max_drawdown": -0.866051850810197,
+            "sharpe": 1.1784896169455377,
+            "avg_mfe": 0.06685143483082998,
+            "avg_mae": -0.04393457234756716,
+            "avg_risk_reward": 2.675369066371111,
+            "target_hit_rate": 0.41784037558685444,
+            "stop_hit_rate": 0.6713615023474179
+          }
+        }
+      },
+      "elite_trade_quality": {
+        "target_elite_breakout_long_quality_success": {
+          "accuracy": 0.6224489795918368,
+          "f1": 0.32727272727272727,
+          "precision": 0.32142857142857145,
+          "recall": 0.3333333333333333,
+          "positive_rate": 0.2857142857142857,
+          "class_counts": {
+            "0": 71,
+            "1": 27
+          },
+          "confidence_buckets": {
+            ">=60%": {
+              "accuracy": 0.6712328767123288,
+              "coverage": 0.7448979591836735,
+              "signals": 73
+            },
+            ">=70%": {
+              "accuracy": 0.6833333333333333,
+              "coverage": 0.6122448979591837,
+              "signals": 60
+            },
+            ">=80%": {
+              "accuracy": 0.7428571428571429,
+              "coverage": 0.35714285714285715,
+              "signals": 35
+            },
+            ">=85%": {
+              "accuracy": 0.7307692307692307,
+              "coverage": 0.2653061224489796,
+              "signals": 26
+            }
+          },
+          "setup": "setup_breakout_long",
+          "train_active_rows": 361,
+          "test_active_rows": 98,
+          "setup_coverage_test": 0.013849632560768797,
+          "baseline_win_rate_test": 0.2755102040816326,
+          "strategy_id": "breakout_long",
+          "label": "Breakout long",
+          "source_target": "target_elite_breakout_long_quality_success",
+          "elite_target": "target_elite_breakout_long_quality_success",
+          "minimum_return_pct": 0.01,
+          "minimum_risk_reward": 1.5,
+          "strategy_quality": {
+            "label": "Breakout long",
+            "direction": "long",
+            "signal_count": 98,
+            "coverage": 0.013849632560768797,
+            "win_rate": 0.2857142857142857,
+            "avg_return": 0.03483356811683954,
+            "median_return": 0.009233121046108406,
+            "avg_win": 0.09213085790093854,
+            "avg_loss": -0.03845366300235682,
+            "profit_factor": 3.0645141655906754,
+            "max_drawdown": -0.4411478002073089,
+            "sharpe": 1.6297971846713608,
+            "avg_mfe": 0.08437533395864899,
+            "avg_mae": -0.0422589769453043,
+            "avg_risk_reward": 3.098889843218069,
+            "target_hit_rate": 0.6122448979591837,
+            "stop_hit_rate": 0.6836734693877551
+          },
+          "proof_rule": "Elite trade-quality accuracy is valid only on active setup rows and must disclose confidence threshold plus coverage."
+        },
+        "target_elite_breakout_long_return_positive": {
+          "accuracy": 0.45918367346938777,
+          "f1": 0.5619834710743802,
+          "precision": 0.5151515151515151,
+          "recall": 0.6181818181818182,
+          "positive_rate": 0.673469387755102,
+          "class_counts": {
+            "0": 43,
+            "1": 55
+          },
+          "confidence_buckets": {
+            ">=60%": {
+              "accuracy": 0.4268292682926829,
+              "coverage": 0.8367346938775511,
+              "signals": 82
+            },
+            ">=70%": {
+              "accuracy": 0.453125,
+              "coverage": 0.6530612244897959,
+              "signals": 64
+            },
+            ">=80%": {
+              "accuracy": 0.48936170212765956,
+              "coverage": 0.47959183673469385,
+              "signals": 47
+            },
+            ">=85%": {
+              "accuracy": 0.40625,
+              "coverage": 0.32653061224489793,
+              "signals": 32
+            }
+          },
+          "setup": "setup_breakout_long",
+          "train_active_rows": 361,
+          "test_active_rows": 98,
+          "setup_coverage_test": 0.013849632560768797,
+          "baseline_win_rate_test": 0.5612244897959183,
+          "strategy_id": "breakout_long",
+          "label": "Breakout long",
+          "source_target": "target_elite_breakout_long_return_positive",
+          "elite_target": "target_elite_breakout_long_return_positive",
+          "minimum_return_pct": 0.01,
+          "minimum_risk_reward": 1.5,
+          "strategy_quality": {
+            "label": "Breakout long",
+            "direction": "long",
+            "signal_count": 98,
+            "coverage": 0.013849632560768797,
+            "win_rate": 0.2857142857142857,
+            "avg_return": 0.03483356811683954,
+            "median_return": 0.009233121046108406,
+            "avg_win": 0.09213085790093854,
+            "avg_loss": -0.03845366300235682,
+            "profit_factor": 3.0645141655906754,
+            "max_drawdown": -0.4411478002073089,
+            "sharpe": 1.6297971846713608,
+            "avg_mfe": 0.08437533395864899,
+            "avg_mae": -0.0422589769453043,
+            "avg_risk_reward": 3.098889843218069,
+            "target_hit_rate": 0.6122448979591837,
+            "stop_hit_rate": 0.6836734693877551
+          },
+          "proof_rule": "Elite trade-quality accuracy is valid only on active setup rows and must disclose confidence threshold plus coverage."
+        },
+        "target_elite_breakout_long_return_pct": {
+          "mae": 0.06805770267492867,
+          "rmse": 0.10987397364374678,
+          "directional_accuracy": 0.5612244897959183,
+          "prediction_mean": 0.008788952603936195,
+          "actual_mean": 0.03483356811683954,
+          "setup": "setup_breakout_long",
+          "train_active_rows": 361,
+          "test_active_rows": 98,
+          "setup_coverage_test": 0.013849632560768797,
+          "strategy_id": "breakout_long",
+          "label": "Breakout long",
+          "source_target": "target_strategy_breakout_long_return_pct",
+          "elite_target": "target_elite_breakout_long_return_pct",
+          "minimum_return_pct": 0.01,
+          "minimum_risk_reward": 1.5,
+          "strategy_quality": {
+            "label": "Breakout long",
+            "direction": "long",
+            "signal_count": 98,
+            "coverage": 0.013849632560768797,
+            "win_rate": 0.2857142857142857,
+            "avg_return": 0.03483356811683954,
+            "median_return": 0.009233121046108406,
+            "avg_win": 0.09213085790093854,
+            "avg_loss": -0.03845366300235682,
+            "profit_factor": 3.0645141655906754,
+            "max_drawdown": -0.4411478002073089,
+            "sharpe": 1.6297971846713608,
+            "avg_mfe": 0.08437533395864899,
+            "avg_mae": -0.0422589769453043,
+            "avg_risk_reward": 3.098889843218069,
+            "target_hit_rate": 0.6122448979591837,
+            "stop_hit_rate": 0.6836734693877551
+          }
+        },
+        "target_elite_breakout_long_risk_reward": {
+          "mae": 3.2751874058297084,
+          "rmse": 3.972093338803612,
+          "directional_accuracy": 0.9285714285714286,
+          "prediction_mean": 3.2172105091110783,
+          "actual_mean": 3.098889843218069,
+          "setup": "setup_breakout_long",
+          "train_active_rows": 361,
+          "test_active_rows": 98,
+          "setup_coverage_test": 0.013849632560768797,
+          "strategy_id": "breakout_long",
+          "label": "Breakout long",
+          "source_target": "target_strategy_breakout_long_risk_reward",
+          "elite_target": "target_elite_breakout_long_risk_reward",
+          "minimum_return_pct": 0.01,
+          "minimum_risk_reward": 1.5,
+          "strategy_quality": {
+            "label": "Breakout long",
+            "direction": "long",
+            "signal_count": 98,
+            "coverage": 0.013849632560768797,
+            "win_rate": 0.2857142857142857,
+            "avg_return": 0.03483356811683954,
+            "median_return": 0.009233121046108406,
+            "avg_win": 0.09213085790093854,
+            "avg_loss": -0.03845366300235682,
+            "profit_factor": 3.0645141655906754,
+            "max_drawdown": -0.4411478002073089,
+            "sharpe": 1.6297971846713608,
+            "avg_mfe": 0.08437533395864899,
+            "avg_mae": -0.0422589769453043,
+            "avg_risk_reward": 3.098889843218069,
+            "target_hit_rate": 0.6122448979591837,
+            "stop_hit_rate": 0.6836734693877551
+          }
+        },
+        "target_elite_mean_reversion_long_quality_success": {
+          "accuracy": 0.5422626788036411,
+          "f1": 0.2314410480349345,
+          "precision": 0.32919254658385094,
+          "recall": 0.17845117845117844,
+          "positive_rate": 0.2093628088426528,
+          "class_counts": {
+            "0": 472,
+            "1": 297
+          },
+          "confidence_buckets": {
+            ">=60%": {
+              "accuracy": 0.5472263868065967,
+              "coverage": 0.8673602080624188,
+              "signals": 667
+            },
+            ">=70%": {
+              "accuracy": 0.5693693693693693,
+              "coverage": 0.7217165149544863,
+              "signals": 555
+            },
+            ">=80%": {
+              "accuracy": 0.5771971496437055,
+              "coverage": 0.5474642392717816,
+              "signals": 421
+            },
+            ">=85%": {
+              "accuracy": 0.5585585585585585,
+              "coverage": 0.43302990897269183,
+              "signals": 333
+            }
+          },
+          "setup": "setup_mean_reversion_long",
+          "train_active_rows": 3953,
+          "test_active_rows": 769,
+          "setup_coverage_test": 0.10867721876766535,
+          "baseline_win_rate_test": 0.3862158647594278,
+          "strategy_id": "mean_reversion_long",
+          "label": "Mean reversion long",
+          "source_target": "target_elite_mean_reversion_long_quality_success",
+          "elite_target": "target_elite_mean_reversion_long_quality_success",
+          "minimum_return_pct": 0.01,
+          "minimum_risk_reward": 1.5,
+          "strategy_quality": {
+            "label": "Mean reversion long",
+            "direction": "long",
+            "signal_count": 769,
+            "coverage": 0.10867721876766535,
+            "win_rate": 0.46293888166449937,
+            "avg_return": 0.020262943365414218,
+            "median_return": 0.015973580699953027,
+            "avg_win": 0.058472930453249895,
+            "avg_loss": -0.04760461492778128,
+            "profit_factor": 2.1816804344682494,
+            "max_drawdown": -0.9574103873829034,
+            "sharpe": 1.3453389905114483,
+            "avg_mfe": 0.05956141081432616,
+            "avg_mae": -0.03823449333246869,
+            "avg_risk_reward": 3.5366124699566712,
+            "target_hit_rate": 0.7269180754226268,
+            "stop_hit_rate": 0.5162548764629389
+          },
+          "proof_rule": "Elite trade-quality accuracy is valid only on active setup rows and must disclose confidence threshold plus coverage."
+        },
+        "target_elite_mean_reversion_long_return_positive": {
+          "accuracy": 0.5474642392717816,
+          "f1": 0.6513026052104208,
+          "precision": 0.642292490118577,
+          "recall": 0.6605691056910569,
+          "positive_rate": 0.657997399219766,
+          "class_counts": {
+            "0": 277,
+            "1": 492
+          },
+          "confidence_buckets": {
+            ">=60%": {
+              "accuracy": 0.5508982035928144,
+              "coverage": 0.8686605981794538,
+              "signals": 668
+            },
+            ">=70%": {
+              "accuracy": 0.5797101449275363,
+              "coverage": 0.717815344603381,
+              "signals": 552
+            },
+            ">=80%": {
+              "accuracy": 0.60431654676259,
+              "coverage": 0.5422626788036411,
+              "signals": 417
+            },
+            ">=85%": {
+              "accuracy": 0.6467065868263473,
+              "coverage": 0.4343302990897269,
+              "signals": 334
+            }
+          },
+          "setup": "setup_mean_reversion_long",
+          "train_active_rows": 3953,
+          "test_active_rows": 769,
+          "setup_coverage_test": 0.10867721876766535,
+          "baseline_win_rate_test": 0.6397919375812744,
+          "strategy_id": "mean_reversion_long",
+          "label": "Mean reversion long",
+          "source_target": "target_elite_mean_reversion_long_return_positive",
+          "elite_target": "target_elite_mean_reversion_long_return_positive",
+          "minimum_return_pct": 0.01,
+          "minimum_risk_reward": 1.5,
+          "strategy_quality": {
+            "label": "Mean reversion long",
+            "direction": "long",
+            "signal_count": 769,
+            "coverage": 0.10867721876766535,
+            "win_rate": 0.46293888166449937,
+            "avg_return": 0.020262943365414218,
+            "median_return": 0.015973580699953027,
+            "avg_win": 0.058472930453249895,
+            "avg_loss": -0.04760461492778128,
+            "profit_factor": 2.1816804344682494,
+            "max_drawdown": -0.9574103873829034,
+            "sharpe": 1.3453389905114483,
+            "avg_mfe": 0.05956141081432616,
+            "avg_mae": -0.03823449333246869,
+            "avg_risk_reward": 3.5366124699566712,
+            "target_hit_rate": 0.7269180754226268,
+            "stop_hit_rate": 0.5162548764629389
+          },
+          "proof_rule": "Elite trade-quality accuracy is valid only on active setup rows and must disclose confidence threshold plus coverage."
+        },
+        "target_elite_mean_reversion_long_return_pct": {
+          "mae": 0.05278599463323182,
+          "rmse": 0.0765736239910509,
+          "directional_accuracy": 0.6397919375812744,
+          "prediction_mean": 0.0078413225710392,
+          "actual_mean": 0.020262943365414218,
+          "setup": "setup_mean_reversion_long",
+          "train_active_rows": 3953,
+          "test_active_rows": 769,
+          "setup_coverage_test": 0.10867721876766535,
+          "strategy_id": "mean_reversion_long",
+          "label": "Mean reversion long",
+          "source_target": "target_strategy_mean_reversion_long_return_pct",
+          "elite_target": "target_elite_mean_reversion_long_return_pct",
+          "minimum_return_pct": 0.01,
+          "minimum_risk_reward": 1.5,
+          "strategy_quality": {
+            "label": "Mean reversion long",
+            "direction": "long",
+            "signal_count": 769,
+            "coverage": 0.10867721876766535,
+            "win_rate": 0.46293888166449937,
+            "avg_return": 0.020262943365414218,
+            "median_return": 0.015973580699953027,
+            "avg_win": 0.058472930453249895,
+            "avg_loss": -0.04760461492778128,
+            "profit_factor": 2.1816804344682494,
+            "max_drawdown": -0.9574103873829034,
+            "sharpe": 1.3453389905114483,
+            "avg_mfe": 0.05956141081432616,
+            "avg_mae": -0.03823449333246869,
+            "avg_risk_reward": 3.5366124699566712,
+            "target_hit_rate": 0.7269180754226268,
+            "stop_hit_rate": 0.5162548764629389
+          }
+        },
+        "target_elite_mean_reversion_long_risk_reward": {
+          "mae": 3.45928988410712,
+          "rmse": 4.177344892381229,
+          "directional_accuracy": 0.9505851755526658,
+          "prediction_mean": 3.239885404512228,
+          "actual_mean": 3.5366124699566712,
+          "setup": "setup_mean_reversion_long",
+          "train_active_rows": 3953,
+          "test_active_rows": 769,
+          "setup_coverage_test": 0.10867721876766535,
+          "strategy_id": "mean_reversion_long",
+          "label": "Mean reversion long",
+          "source_target": "target_strategy_mean_reversion_long_risk_reward",
+          "elite_target": "target_elite_mean_reversion_long_risk_reward",
+          "minimum_return_pct": 0.01,
+          "minimum_risk_reward": 1.5,
+          "strategy_quality": {
+            "label": "Mean reversion long",
+            "direction": "long",
+            "signal_count": 769,
+            "coverage": 0.10867721876766535,
+            "win_rate": 0.46293888166449937,
+            "avg_return": 0.020262943365414218,
+            "median_return": 0.015973580699953027,
+            "avg_win": 0.058472930453249895,
+            "avg_loss": -0.04760461492778128,
+            "profit_factor": 2.1816804344682494,
+            "max_drawdown": -0.9574103873829034,
+            "sharpe": 1.3453389905114483,
+            "avg_mfe": 0.05956141081432616,
+            "avg_mae": -0.03823449333246869,
+            "avg_risk_reward": 3.5366124699566712,
+            "target_hit_rate": 0.7269180754226268,
+            "stop_hit_rate": 0.5162548764629389
+          }
+        },
+        "target_elite_strategy_quality_success": {
+          "accuracy": 0.5790080738177624,
+          "f1": 0.25963488843813387,
+          "precision": 0.378698224852071,
+          "recall": 0.19753086419753085,
+          "positive_rate": 0.19492502883506344,
+          "class_counts": {
+            "0": 543,
+            "1": 324
+          },
+          "confidence_buckets": {
+            ">=60%": {
+              "accuracy": 0.5799207397622193,
+              "coverage": 0.8731257208765859,
+              "signals": 757
+            },
+            ">=70%": {
+              "accuracy": 0.5772870662460567,
+              "coverage": 0.7312572087658593,
+              "signals": 634
+            },
+            ">=80%": {
+              "accuracy": 0.587426326129666,
+              "coverage": 0.5870818915801614,
+              "signals": 509
+            },
+            ">=85%": {
+              "accuracy": 0.5864485981308412,
+              "coverage": 0.4936562860438293,
+              "signals": 428
+            }
+          },
+          "target": "target_elite_strategy_quality_success",
+          "active_filter": "target_elite_strategy_active",
+          "included_strategy_ids": [
+            "breakout_long",
+            "mean_reversion_long"
+          ],
+          "train_active_rows": 4314,
+          "test_active_rows": 867,
+          "setup_coverage_test": 0.12252685132843415,
+          "baseline_win_rate_test": 0.3737024221453287,
+          "minimum_return_pct": 0.01,
+          "minimum_risk_reward": 1.5
+        },
+        "target_elite_strategy_return_pct": {
+          "mae": 0.054468796441269354,
+          "rmse": 0.08100613879490878,
+          "directional_accuracy": 0.6309111880046137,
+          "prediction_mean": 0.008165089413523674,
+          "actual_mean": 0.021909911330396548,
+          "target": "target_elite_strategy_return_pct",
+          "active_filter": "target_elite_strategy_active",
+          "included_strategy_ids": [
+            "breakout_long",
+            "mean_reversion_long"
+          ],
+          "train_active_rows": 4314,
+          "test_active_rows": 867,
+          "setup_coverage_test": 0.12252685132843415
+        },
+        "target_elite_strategy_risk_reward": {
+          "mae": 3.349299515224943,
+          "rmse": 4.072311770871676,
+          "directional_accuracy": 0.9607843137254902,
+          "prediction_mean": 3.233051941481944,
+          "actual_mean": 3.487135171893946,
+          "target": "target_elite_strategy_risk_reward",
+          "active_filter": "target_elite_strategy_active",
+          "included_strategy_ids": [
+            "breakout_long",
+            "mean_reversion_long"
+          ],
+          "train_active_rows": 4314,
+          "test_active_rows": 867,
+          "setup_coverage_test": 0.12252685132843415
+        }
+      }
+    },
+    "usage": "These models support probability-based breakout, breakdown, reversal, volatility, strategy quality, future range, and risk-adjusted return intelligence. They do not guarantee outcomes."
+  },
+  "training_phase_manifest": {
+    "phase_1_intraday_data": {
+      "status": "partial",
+      "details": "Adds yfinance-safe recent 5m/15m/1h intraday feature blocks, neutral-filled for older daily rows. Full 1m/4h multi-year coverage still needs Polygon/Alpaca storage."
+    },
+    "phase_2_vwap_features": {
+      "status": "partial",
+      "details": "Adds intraday price-above-VWAP, VWAP distance, VWAP slope, reclaim, and rejection features for available recent intraday windows."
+    },
+    "phase_3_multi_timeframe_alignment": {
+      "status": "partial",
+      "details": "Adds 5m/15m/1h trend features and bullish/bearish/mixed multi-timeframe alignment scores. 4h/daily/weekly stacked alignment is pending."
+    },
+    "phase_4_market_regime_detection": {
+      "status": "partial",
+      "details": "SPY/QQQ trend, VIX regime, volatility, and yield proxy features are included. Full regime classifier is pending."
+    },
+    "phase_5_macro_vix_data": {
+      "status": "partial",
+      "details": "VIX and 10-year yield proxy are included from Yahoo. FRED inflation, GDP, unemployment, Fed/CPI calendars are pending."
+    },
+    "phase_6_sector_rotation": {
+      "status": "partial",
+      "details": "Sector ETF returns, basket strength, dispersion, and stock-vs-sector basket strength are included."
+    },
+    "phase_7_news_sentiment": {
+      "status": "missing",
+      "details": "FinBERT/OpenAI sentiment pipeline is not part of this Kaggle training script yet."
+    },
+    "phase_8_event_flags": {
+      "status": "missing",
+      "details": "Earnings, Fed, CPI, OPEX, and major-event flags require event calendar ingestion."
+    },
+    "phase_9_improved_labels": {
+      "status": "trained",
+      "details": "Adds and trains models for 3-class ATR labels, binary direction, breakout, breakdown, reversal, volatility expansion, future return, future range, and risk-adjusted return targets."
+    },
+    "phase_10_confidence_filtering": {
+      "status": "trained",
+      "details": "Reports all-signal and >=60/70/80/85 confidence bucket accuracy with coverage."
+    },
+    "phase_11_historical_similarity": {
+      "status": "partial",
+      "details": "Backend has a similarity service. Training artifact does not yet ensemble it."
+    },
+    "phase_12_monte_carlo_simulation": {
+      "status": "partial",
+      "details": "Backend simulation exists. Training artifact does not yet save Monte Carlo calibration parameters."
+    },
+    "phase_13_sequence_models": {
+      "status": "missing",
+      "details": "LSTM/GRU/Transformer/TFT should come after feature and label quality improves."
+    },
+    "phase_14_ensemble_strategy": {
+      "status": "partial",
+      "details": "Stable artifact trains multiple XGBoost classifiers/regressors. LightGBM/CatBoost hooks remain disabled because previous Kaggle GPU runs warned/segfaulted."
+    },
+    "phase_15_walk_forward_validation": {
+      "status": "partial",
+      "details": "Optuna uses TimeSeriesSplit and final holdout is chronological. Full rolling walk-forward backtest windows are pending."
+    },
+    "phase_16_drift_retraining": {
+      "status": "missing",
+      "details": "Model/version metadata is saved; automated drift detection and retraining scheduler are pending."
+    },
+    "phase_17_llm_explanation_layer": {
+      "status": "partial",
+      "details": "Metrics and backend provide explanation-ready facts. LLM remains explanation-only, not a direct price predictor."
+    },
+    "phase_18_strategy_aware_prediction": {
+      "status": "trained",
+      "details": "Adds setup detectors and v7 setup-only strategy-quality targets for breakout long, breakdown short, pullback continuation, mean reversion, squeeze breakout, VWAP reclaim, and RSI divergence short."
+    },
+    "phase_19_strategy_quality_validation": {
+      "status": "trained",
+      "details": "Reports strategy quality only on active setup rows: signal count, coverage, win rate, profit factor, average win/loss, max drawdown, Sharpe, MFE/MAE, expected return, and risk/reward."
+    },
+    "phase_20_strategy_filtered_prediction": {
+      "status": "trained",
+      "details": "Adds a v8 high-quality strategy opportunity model trained only on v7-positive long setups instead of all candles, with accuracy and confidence buckets reported against disclosed coverage."
+    },
+    "phase_21_specialist_strategy_models": {
+      "status": "trained",
+      "details": "Adds v9 specialist models for breakout long, mean reversion long, and VWAP reclaim, with separate setup-only probability, expected return, risk/reward, confidence buckets, and coverage proof."
+    },
+    "phase_22_elite_trade_quality_models": {
+      "status": "trained",
+      "details": "Adds v10 elite trade-quality models for breakout long and mean reversion long only, requiring target-before-stop success, positive return, and minimum realized risk/reward."
+    },
+    "extra_technical_volume_divergence": {
+      "status": "trained",
+      "details": "Adds SMA/WMA/EMA, RSI, MACD, Bollinger, ATR/ADX, 2x/3x volume spikes, volume-confirmed breakouts/breakdowns, and RSI bullish/bearish divergence features."
+    }
+  },
+  "honesty_policy": "Outputs are probability-based market simulations and AI-generated financial intelligence, not financial advice. Accuracy claims must include validation method, confidence threshold, and coverage.",
+  "created_at": "2026-05-16T03:52:30.307713+00:00"
+}
