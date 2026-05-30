@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import time
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from pydantic import BaseModel
 
-from app.schemas import PortfolioAnalysisRequest, PredictionRequest, TickerListRequest
+from app.schemas import PortfolioAnalysisRequest, PredictionRequest, TickerListRequest, ToolCallRequest
 from app.services.copilot_service import CopilotService
 from app.services.advanced_intelligence import AdvancedMarketIntelligenceEngine
 from app.services.finnhub_service import FinnhubService
@@ -16,6 +16,7 @@ from app.services.backtest_service import run_backtest, STRATEGY_LABELS
 from app.services.fred_service import FredService
 from app.services.similarity_service import find_similar_setups
 from app.services.market import MarketDataService
+from app.services.market import normalize_history
 from app.services.model_service import ModelService
 from app.services.newsapi_service import NewsApiService
 from app.services.portfolio import PortfolioService
@@ -64,15 +65,34 @@ SCAN_UNIVERSES = {
     "sp500_sample": "AAPL,MSFT,NVDA,AMZN,META,GOOGL,BRK-B,LLY,JPM,AVGO,XOM,TSLA,UNH,V,MA,COST,PG,HD,NFLX,JNJ",
 }
 
+TOOL_DEFINITIONS = {
+    "get_live_quote": "Return latest quote for a ticker.",
+    "get_candles": "Return OHLCV candles for a ticker, period, and interval.",
+    "calculate_indicators": "Return stock overview/analysis indicators.",
+    "predict_market_scenario": "Return MarketVision probability simulation.",
+    "run_scanner": "Run ranked bot scanner over tickers.",
+    "run_historical_similarity": "Return similar historical setups.",
+    "run_monte_carlo": "Return chart-ready Monte Carlo paths.",
+    "get_performance_metrics": "Return signal ledger, calibration, and drift metrics.",
+    "explain_prediction": "Return fact-grounded prediction explanation.",
+    "analyze_portfolio": "Return portfolio intelligence.",
+}
+
 
 def _record_bot_signal(ticker: str, simulation: dict, source: str) -> None:
     bot = simulation.get("ai_signal_bot") or {}
     final_signal = simulation.get("final_signal") or {}
     trade_plan = bot.get("trade_plan") or {}
+    advanced = simulation.get("advanced_intelligence") or {}
+    macro = advanced.get("macro") or {}
+    sentiment = advanced.get("sentiment") or {}
     record_signal({
         "source": source,
         "ticker": ticker.upper(),
         "model_version": simulation.get("model_version"),
+        "period": simulation.get("period"),
+        "interval": simulation.get("interval"),
+        "horizon_steps": simulation.get("horizon_steps"),
         "quality_label": bot.get("quality_label") or simulation.get("quality_label"),
         "coverage_level": bot.get("coverage_level") or simulation.get("coverage_level"),
         "action": bot.get("action"),
@@ -83,6 +103,8 @@ def _record_bot_signal(ticker: str, simulation: dict, source: str) -> None:
         "expected_return": bot.get("expected_return"),
         "dominant_scenario": bot.get("dominant_scenario"),
         "final_signal_probability": final_signal.get("probability"),
+        "macro_regime": macro.get("macro_regime_label"),
+        "sentiment_score": sentiment.get("score"),
         "entry_price": trade_plan.get("entry_price"),
         "stop_loss": trade_plan.get("stop_loss"),
         "target_1": trade_plan.get("target_1"),
@@ -115,6 +137,53 @@ def healthcheck() -> dict[str, str | bool]:
         "newsapi_connected": newsapi_service.is_available(),
         "finbert_sentiment_available": finbert_service.is_available(),
     }
+
+
+@app.get("/api/tools")
+def list_marketvision_tools() -> dict:
+    return {
+        "tools": [
+            {"name": name, "description": description, "returns": "structured_json"}
+            for name, description in TOOL_DEFINITIONS.items()
+        ],
+        "disclaimer": "MarketVision tools return probability-based market simulations and AI-generated financial intelligence, not financial advice.",
+    }
+
+
+@app.post("/api/tools/{tool_name}")
+def call_marketvision_tool(tool_name: str, request: ToolCallRequest) -> dict:
+    args = request.arguments
+    ticker = str(args.get("ticker", "AAPL")).upper()
+    period = str(args.get("period", "1y"))
+    interval = str(args.get("interval", "1d"))
+    horizon_steps = int(args.get("horizon_steps", 12))
+
+    if tool_name == "get_live_quote":
+        return {"tool": tool_name, "result": stock_quote(ticker)}
+    if tool_name == "get_candles":
+        history = market_service.get_history(ticker=ticker, period=period, interval=interval)
+        return {"tool": tool_name, "result": {"ticker": ticker, "period": period, "interval": interval, "candles": normalize_history(history, limit=int(args.get("limit", 120)))}}
+    if tool_name == "calculate_indicators":
+        return {"tool": tool_name, "result": market_service.build_stock_analysis(ticker=ticker, period=period, interval=interval)}
+    if tool_name == "predict_market_scenario":
+        return {"tool": tool_name, "result": advanced_engine.build_simulation_response(ticker=ticker, period=period, interval=interval, horizon_steps=horizon_steps)}
+    if tool_name == "run_scanner":
+        return {"tool": tool_name, "result": scan_signal_bot(tickers=str(args.get("tickers", ticker)), period=period, interval=interval, horizon_steps=horizon_steps)}
+    if tool_name == "run_historical_similarity":
+        return {"tool": tool_name, "result": bot_historical_similarity(ticker=ticker, horizon_steps=horizon_steps)}
+    if tool_name == "run_monte_carlo":
+        simulation = advanced_engine.build_simulation_response(ticker=ticker, period=period, interval=interval, horizon_steps=horizon_steps)
+        return {"tool": tool_name, "result": simulation.get("monte_carlo_chart")}
+    if tool_name == "get_performance_metrics":
+        return {"tool": tool_name, "result": bot_performance()}
+    if tool_name == "explain_prediction":
+        simulation = advanced_engine.build_simulation_response(ticker=ticker, period=period, interval=interval, horizon_steps=horizon_steps)
+        return {"tool": tool_name, "result": copilot_service.explain_prediction_facts(simulation)}
+    if tool_name == "analyze_portfolio":
+        holdings = args.get("holdings") or [{"ticker": ticker, "shares": float(args.get("shares", 1))}]
+        return {"tool": tool_name, "result": portfolio_service.analyze_portfolio(holdings=holdings, period=period)}
+
+    raise HTTPException(status_code=404, detail=f"Unknown MarketVision tool: {tool_name}")
 
 
 @app.get("/api/market/overview")
@@ -223,19 +292,50 @@ def scan_signal_bot(
             )
             _record_bot_signal(symbol, simulation, source="scanner")
             bot = simulation.get("ai_signal_bot") or {}
+            advanced = simulation.get("advanced_intelligence") or {}
+            final_signal = simulation.get("final_signal") or {}
+            trade_plan = bot.get("trade_plan") or {}
+            historical_similarity = advanced.get("historical_similarity") or {}
+            sentiment = advanced.get("sentiment") or {}
+            macro = advanced.get("macro") or {}
+            dominant = bot.get("dominant_scenario") or simulation.get("dominant_scenario")
+            failed_gates = list(bot.get("failed_gates", []))
+            final_probability = final_signal.get("probability")
+            similarity_strength = historical_similarity.get("average_similarity_score")
+            sentiment_score = sentiment.get("score")
+            macro_regime = macro.get("macro_regime_label")
+            if final_probability is not None and float(final_probability) < 0.65 and "confidence_failed" not in failed_gates:
+                failed_gates.append("confidence_failed")
+            if bot.get("risk_score") is not None and float(bot.get("risk_score") or 0) >= 70 and "risk_failed" not in failed_gates:
+                failed_gates.append("risk_failed")
+            if trade_plan.get("risk_reward_target_1") is not None and float(trade_plan.get("risk_reward_target_1") or 0) < 1.25 and "rr_failed" not in failed_gates:
+                failed_gates.append("rr_failed")
+            if sentiment_score is not None and float(sentiment_score) < -0.2 and "sentiment_failed" not in failed_gates:
+                failed_gates.append("sentiment_failed")
+            if similarity_strength is not None and float(similarity_strength) < 0.55 and "weak_historical_similarity" not in failed_gates:
+                failed_gates.append("weak_historical_similarity")
+            if macro_regime in {"risk_off", "restrictive_rates"} and dominant == "bullish" and "macro_conflict" not in failed_gates:
+                failed_gates.append("macro_conflict")
             results.append({
                 "ticker": symbol,
                 "quality_label": bot.get("quality_label"),
                 "coverage_level": bot.get("coverage_level"),
                 "action": bot.get("action"),
                 "all_gates_passed": bot.get("all_gates_passed", False),
-                "failed_gates": bot.get("failed_gates", []),
-                "eligible_for_paper_trade": (bot.get("trade_plan") or {}).get("eligible_for_paper_trade", False),
+                "failed_gates": failed_gates,
+                "eligible_for_paper_trade": trade_plan.get("eligible_for_paper_trade", False),
                 "confidence": bot.get("confidence"),
                 "risk_score": bot.get("risk_score"),
                 "expected_return": bot.get("expected_return"),
+                "final_signal_probability": final_probability,
+                "risk_reward_ratio": trade_plan.get("risk_reward_target_1"),
+                "historical_similarity_strength": similarity_strength,
+                "sentiment_score": sentiment_score,
+                "macro_regime": macro_regime,
+                "macro_compatible": "macro_conflict" not in failed_gates,
+                "intraday_vwap": advanced.get("intraday_vwap"),
                 "gates": bot.get("gates"),
-                "trade_plan": bot.get("trade_plan"),
+                "trade_plan": trade_plan,
             })
         except Exception as exc:
             results.append({"ticker": symbol, "error": str(exc), "all_gates_passed": False})
@@ -248,7 +348,13 @@ def scan_signal_bot(
     }
     results.sort(key=lambda item: (
         quality_order.get(str(item.get("quality_label")), 9),
+        -float(item.get("final_signal_probability") or 0),
         -float(item.get("confidence") or 0),
+        float(item.get("risk_score") or 100),
+        -float(item.get("risk_reward_ratio") or 0),
+        -float(item.get("historical_similarity_strength") or 0),
+        -float(item.get("sentiment_score") or 0),
+        0 if item.get("macro_compatible", True) else 1,
     ))
     passed = [item for item in results if item.get("all_gates_passed")]
     buckets: dict[str, int] = {}
@@ -279,6 +385,56 @@ def bot_performance() -> dict:
         "v12_walk_forward_proof": model_service.final_hybrid_policy.get("promoted_signal_report", {}),
         "accuracy_policy": model_service.final_hybrid_policy.get("accuracy_claim_policy"),
         "disclaimer": "Probability-based market simulations and AI-generated financial intelligence, not financial advice.",
+    }
+
+
+@app.get("/api/bot/historical-similarity")
+def bot_historical_similarity(
+    ticker: str = Query(..., min_length=1),
+    horizon_steps: int = Query(default=12, ge=4, le=60),
+) -> dict:
+    analysis = advanced_engine.analyze(
+        ticker=ticker,
+        horizon_steps=horizon_steps,
+        include_intraday=True,
+    )
+    similarity = analysis.get("historical_similarity") or {}
+    probabilities = similarity.get("outcome_probabilities") or {}
+    setups = similarity.get("similar_setups") or []
+    return {
+        "ticker": ticker.upper(),
+        "available": bool(similarity.get("available")),
+        "current_setup_features": similarity.get("current_setup_features", {}),
+        "top_similar_historical_dates": setups,
+        "similarity_score": similarity.get("average_similarity_score"),
+        "average_future_return_pct": similarity.get("average_future_return_pct"),
+        "bullish_outcome_pct": probabilities.get("bullish"),
+        "bearish_outcome_pct": probabilities.get("bearish"),
+        "sideways_outcome_pct": probabilities.get("sideways"),
+        "best_case_pct": similarity.get("best_case_pct"),
+        "worst_case_pct": similarity.get("worst_case_pct"),
+        "average_drawdown_pct": similarity.get("average_drawdown_pct"),
+        "reason": similarity.get("reason"),
+        "source": "advanced_market_intelligence_historical_similarity",
+        "disclaimer": "Probability-based historical comparison for research, not financial advice.",
+    }
+
+
+@app.post("/api/bot/explain")
+def explain_bot_prediction(request: PredictionRequest) -> dict:
+    simulation = advanced_engine.build_simulation_response(
+        ticker=request.ticker,
+        period=request.period,
+        interval=request.interval,
+        horizon_steps=request.horizon_steps,
+    )
+    explanation = copilot_service.explain_prediction_facts(simulation)
+    return {
+        "ticker": request.ticker.upper(),
+        "quality_label": simulation.get("quality_label"),
+        "coverage_level": simulation.get("coverage_level"),
+        "final_signal": simulation.get("final_signal"),
+        **explanation,
     }
 
 
@@ -385,7 +541,7 @@ def market_macro() -> dict:
 def macro_snapshot() -> dict:
     if not fred_service.is_available():
         return {"available": False, "message": "FRED API key not configured"}
-    return {"available": True, "source": "fred", "indicators": fred_service.get_macro_snapshot()}
+    return fred_service.get_macro_intelligence()
 
 
 @app.get("/api/market/macro/series/{series_id}")
@@ -491,7 +647,7 @@ def predict_stock(request: PredictionRequest) -> dict:
 
 @app.post("/api/portfolio/analyze")
 def analyze_portfolio(request: PortfolioAnalysisRequest) -> dict:
-    payload = [{"ticker": item.ticker, "shares": item.shares} for item in request.holdings]
+    payload = [{"ticker": item.ticker, "shares": item.shares, "average_cost": item.average_cost} for item in request.holdings]
     return portfolio_service.analyze_portfolio(holdings=payload, period=request.period)
 
 

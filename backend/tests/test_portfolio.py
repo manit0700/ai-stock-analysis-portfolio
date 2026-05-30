@@ -20,6 +20,9 @@ def test_analyze_portfolio_from_prices_flags_concentration_risk() -> None:
     assert result["total_market_value"] == 1103.0
     assert any("concentration risk" in warning.lower() for warning in result["warnings"])
     assert result["holdings"][0]["ticker"] == "AAPL"
+    assert "sector_exposure" in result
+    assert "portfolio_risk_score" in result
+    assert "ai_risk_summary" in result
 
 
 def test_analyze_portfolio_from_prices_returns_correlation_matrix() -> None:
@@ -33,7 +36,10 @@ def test_analyze_portfolio_from_prices_returns_correlation_matrix() -> None:
     )
     positions = {"AAPL": 4, "MSFT": 2, "NVDA": 3}
 
-    result = analyze_portfolio_from_prices(price_frame, positions)
+    result = analyze_portfolio_from_prices(price_frame, positions, average_costs={"AAPL": 90, "MSFT": 210})
 
     assert set(result["correlation_matrix"].keys()) == {"AAPL", "MSFT", "NVDA"}
     assert result["diversification_score"] > 0
+    assert result["holdings"][0]["average_cost"] == 90
+    assert result["holdings"][0]["unrealized_pnl_pct"] is not None
+    assert isinstance(result["suggested_watchlist_alerts"], list)

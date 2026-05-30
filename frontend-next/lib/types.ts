@@ -35,6 +35,17 @@ export type MacroConditions = {
   flags: string[];
   risks: string[];
   overall_assessment: "positive" | "mixed" | "cautious" | "uncertain" | string;
+  macro_intelligence?: {
+    scores?: {
+      risk_on_score?: number;
+      inflation_pressure_score?: number;
+      rate_pressure_score?: number;
+      recession_risk_score?: number;
+      volatility_pressure_score?: number;
+    };
+    macro_regime_label?: string;
+    summary?: string;
+  };
 };
 
 export type CopilotChatResponse = {
@@ -45,9 +56,12 @@ export type CopilotChatResponse = {
 export type PortfolioHolding = {
   ticker: string;
   shares: number;
+  average_cost?: number | null;
   latest_price: number;
   market_value: number;
   weight_pct: number;
+  unrealized_pnl_pct?: number | null;
+  sector?: string;
 };
 
 export type PortfolioAnalysis = {
@@ -58,6 +72,13 @@ export type PortfolioAnalysis = {
   max_drawdown_pct: number;
   diversification_score: number;
   holdings: PortfolioHolding[];
+  sector_exposure?: Record<string, number>;
+  correlation_risk?: number;
+  volatility_risk?: number;
+  concentration_risk?: number;
+  portfolio_risk_score?: number;
+  ai_risk_summary?: string;
+  suggested_watchlist_alerts?: string[];
   correlation_matrix: Record<string, Record<string, number>>;
   warnings: string[];
 };
@@ -118,6 +139,7 @@ export type BacktestTrade = {
   pnl_pct: number;
   gross_pnl_pct?: number;
   estimated_round_trip_cost_pct?: number;
+  exit_reason?: string;
   outcome: "win" | "loss" | "open";
 };
 
@@ -126,6 +148,7 @@ export type BacktestResult = {
   ticker: string;
   strategy: string;
   strategy_label: string;
+  strategy_type?: string;
   period: string;
   initial_capital: number;
   total_return_pct: number;
@@ -138,6 +161,10 @@ export type BacktestResult = {
   win_rate_pct: number;
   avg_win_pct: number;
   avg_loss_pct: number;
+  profit_factor?: number;
+  average_reward_risk?: number;
+  false_positive_rate_pct?: number;
+  invalid_trades?: number;
   final_equity: number;
   trades: BacktestTrade[];
   equity_curve: { date: string; equity: number }[];
@@ -147,6 +174,10 @@ export type BacktestResult = {
     slippage_estimate_pct: number;
     one_way_cost_pct: number;
     round_trip_cost_pct: number;
+    max_position_pct?: number;
+    min_dollar_volume?: number;
+    stop_loss_pct?: number;
+    target_pct?: number;
     note: string;
   };
   error?: string;
@@ -164,6 +195,44 @@ export type SimilarityResult = {
     sideways_count: number;
     total_matches_scanned: number;
   };
+};
+
+export type BotHistoricalSimilarityResult = {
+  ticker: string;
+  available: boolean;
+  current_setup_features: Record<string, unknown>;
+  top_similar_historical_dates: Array<{
+    date: string;
+    similarity_score: number;
+    future_10_bar_return_pct: number;
+    best_case_pct?: number;
+    worst_case_pct?: number;
+    max_drawdown_pct?: number;
+    outcome: "bullish" | "bearish" | "sideways";
+  }>;
+  similarity_score: number | null;
+  average_future_return_pct: number | null;
+  bullish_outcome_pct: number | null;
+  bearish_outcome_pct: number | null;
+  sideways_outcome_pct: number | null;
+  best_case_pct: number | null;
+  worst_case_pct: number | null;
+  average_drawdown_pct: number | null;
+  reason?: string;
+  source: string;
+  disclaimer: string;
+};
+
+export type BotExplanationResponse = {
+  ticker: string;
+  quality_label?: string;
+  coverage_level?: string;
+  final_signal?: Record<string, unknown>;
+  available: boolean;
+  model: string;
+  explanation: string;
+  facts_used: Record<string, unknown>;
+  disclaimer: string;
 };
 
 export type NewsItem = {
@@ -264,6 +333,18 @@ export type SimulationResponse = {
   confidence_band: {
     upper: number[];
     lower: number[];
+  };
+  monte_carlo_chart?: {
+    main_predicted_path: MonteCarloChartPoint[];
+    bullish_path: MonteCarloChartPoint[];
+    bearish_path: MonteCarloChartPoint[];
+    sideways_path: MonteCarloChartPoint[];
+    confidence_upper: MonteCarloChartPoint[];
+    confidence_lower: MonteCarloChartPoint[];
+    volatility_cone_p05: MonteCarloChartPoint[];
+    volatility_cone_p95: MonteCarloChartPoint[];
+    expected_range: { low: number; high: number };
+    method: string;
   };
   reasoning: string;
   reasons: string[];
@@ -378,6 +459,13 @@ export type SimulationResponse = {
   } | null;
 };
 
+export type MonteCarloChartPoint = {
+  date: string;
+  value: number;
+  series: string;
+  is_prediction: boolean;
+};
+
 export type BotScanItem = {
   ticker: string;
   quality_label?: string;
@@ -389,6 +477,13 @@ export type BotScanItem = {
   confidence?: number;
   risk_score?: number;
   expected_return?: number | null;
+  final_signal_probability?: number | null;
+  risk_reward_ratio?: number | null;
+  historical_similarity_strength?: number | null;
+  sentiment_score?: number | null;
+  macro_regime?: string | null;
+  macro_compatible?: boolean;
+  intraday_vwap?: Record<string, unknown>;
   gates?: Record<string, boolean>;
   trade_plan?: SimulationResponse["ai_signal_bot"] extends infer B
     ? B extends { trade_plan?: infer T } ? T : never
@@ -410,16 +505,37 @@ export type BotScanResponse = {
 };
 
 export type BotPerformanceResponse = {
+  total_predictions?: number;
   total_logged_predictions: number;
+  pending_signals?: number;
+  resolved_signals?: number;
   promoted_signals: number;
   pending_outcomes: number;
   resolved_outcomes: number;
+  win_rate?: number | null;
+  loss_rate?: number | null;
+  partial_win_rate?: number | null;
   resolved_win_rate: number | null;
+  outcome_counts?: Record<string, number>;
   quality_counts: Record<string, number>;
   action_counts: Record<string, number>;
-  quality_performance?: Record<string, { count: number; resolved: number; wins: number; win_rate: number | null }>;
-  action_performance?: Record<string, { count: number; resolved: number; wins: number; win_rate: number | null }>;
+  promoted_signal_performance?: PerformanceBucket;
+  quality_performance?: Record<string, PerformanceBucket>;
+  action_performance?: Record<string, PerformanceBucket>;
   confidence_buckets: Record<string, { count: number; resolved: number; wins: number; win_rate: number | null }>;
+  confidence_bucket_performance?: Record<string, PerformanceBucket>;
+  drift_monitoring?: {
+    live_signal_accuracy: number | null;
+    recent_resolved_count: number;
+    high_confidence_accuracy: number | null;
+    high_confidence_resolved_count: number;
+    quality_distribution: Record<string, number>;
+    confidence_distribution: Record<string, number>;
+    feature_drift: Record<string, unknown>;
+    prediction_distribution: Record<string, number>;
+    regime_specific_performance: Record<string, unknown>;
+    warnings: string[];
+  };
   v12_walk_forward_proof?: {
     accuracy?: number;
     confidence_buckets?: Record<string, { accuracy?: number; coverage?: number; signals?: number }>;
@@ -428,4 +544,19 @@ export type BotPerformanceResponse = {
   accuracy_policy?: string;
   note: string;
   disclaimer: string;
+};
+
+export type PerformanceBucket = {
+  count: number;
+  pending?: number;
+  resolved: number;
+  wins: number;
+  losses?: number;
+  partial_wins?: number;
+  invalid?: number;
+  accuracy?: number | null;
+  win_rate: number | null;
+  loss_rate?: number | null;
+  partial_win_rate?: number | null;
+  average_risk_score?: number | null;
 };

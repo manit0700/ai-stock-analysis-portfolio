@@ -17,6 +17,7 @@ class PricePoint(BaseModel):
 class HoldingInput(BaseModel):
     ticker: str = Field(min_length=1, max_length=10)
     shares: float = Field(gt=0)
+    average_cost: float | None = Field(default=None, gt=0)
 
 
 class TickerListRequest(BaseModel):
@@ -35,6 +36,10 @@ class PredictionRequest(BaseModel):
     period: str = Field(default="1y", min_length=2, max_length=10)
     interval: str = Field(default="1d", min_length=2, max_length=10)
     horizon_steps: int = Field(default=12, ge=4, le=60)
+
+
+class ToolCallRequest(BaseModel):
+    arguments: dict = Field(default_factory=dict)
 
 
 class NewsItem(BaseModel):

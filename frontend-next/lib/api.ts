@@ -1,4 +1,4 @@
-import type { BacktestResult, BotPerformanceResponse, BotScanResponse, CompareResult, CopilotChatResponse, HealthResponse, MacroConditions, MarketOverviewResponse, NewsItem, PortfolioAnalysis, SimulationResponse, SimilarityResult, StockAnalysis, StockOverview, WatchlistResponse } from "./types";
+import type { BacktestResult, BotExplanationResponse, BotHistoricalSimilarityResult, BotPerformanceResponse, BotScanResponse, CompareResult, CopilotChatResponse, HealthResponse, MacroConditions, MarketOverviewResponse, NewsItem, PortfolioAnalysis, SimulationResponse, SimilarityResult, StockAnalysis, StockOverview, WatchlistResponse } from "./types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
 
@@ -73,7 +73,7 @@ export async function fetchMarketNewsItems(limit = 8): Promise<NewsItem[]> {
 }
 
 export async function analyzePortfolio(
-  holdings: { ticker: string; shares: number }[],
+  holdings: { ticker: string; shares: number; average_cost?: number | null }[],
   period = "1y"
 ): Promise<PortfolioAnalysis> {
   return apiFetch<PortfolioAnalysis>("/api/portfolio/analyze", {
@@ -98,6 +98,18 @@ export async function fetchStockQuote(ticker: string): Promise<{ quote: { curren
 
 export async function fetchSimilarity(ticker: string, topN = 5): Promise<SimilarityResult> {
   return apiFetch<SimilarityResult>(`/api/stocks/${ticker}/similarity?top_n=${topN}`);
+}
+
+export async function fetchBotHistoricalSimilarity(ticker: string, horizonSteps = 12): Promise<BotHistoricalSimilarityResult> {
+  const params = new URLSearchParams({ ticker, horizon_steps: String(horizonSteps) });
+  return apiFetch<BotHistoricalSimilarityResult>(`/api/bot/historical-similarity?${params.toString()}`);
+}
+
+export async function explainBotPrediction(ticker: string, period = "1y", interval = "1d", horizonSteps = 12): Promise<BotExplanationResponse> {
+  return apiFetch<BotExplanationResponse>("/api/bot/explain", {
+    method: "POST",
+    body: JSON.stringify({ ticker, period, interval, horizon_steps: horizonSteps }),
+  });
 }
 
 export async function compareStocks(tickers: string[], period = "1y"): Promise<CompareResult> {

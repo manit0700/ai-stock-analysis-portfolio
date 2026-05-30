@@ -50,10 +50,24 @@ def test_advanced_engine_returns_multifactor_output() -> None:
     assert result["ticker"] == "AAPL"
     assert round(sum(result["probabilities"].values()), 2) == 1.0
     assert "vwap" in result["technical_analysis"]
+    assert result["intraday_vwap"]["available"] is True
+    assert "5m" in result["intraday_vwap"]["timeframes"]
     assert "5m" in result["multi_timeframe_alignment"]["trends"]
     assert result["monte_carlo_simulation"]["horizon_steps"] == 8
     assert len(result["monte_carlo_simulation"]["main_predicted_line"]) == 8
+    similarity = result["historical_similarity"]
+    assert similarity["available"] is True
+    assert "current_setup_features" in similarity
+    assert "best_case_pct" in similarity
+    assert "worst_case_pct" in similarity
+    assert "average_drawdown_pct" in similarity
     assert "not financial advice" in result["disclaimer"].lower()
+
+    simulation = engine.build_simulation_response("AAPL", horizon_steps=8)
+    assert len(simulation["monte_carlo_chart"]["main_predicted_path"]) == 8
+    assert len(simulation["monte_carlo_chart"]["confidence_upper"]) == 8
+    assert simulation["monte_carlo_chart"]["expected_range"]["high"] >= simulation["monte_carlo_chart"]["expected_range"]["low"]
+    assert simulation["monte_carlo_chart"]["main_predicted_path"][0]["is_prediction"] is True
 
 
 def test_advanced_engine_reports_missing_unavailable_layers() -> None:

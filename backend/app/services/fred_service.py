@@ -89,6 +89,10 @@ def _change_label(current: float | None, prev: float | None) -> str:
     return "neutral"
 
 
+def _clamp_score(value: float) -> int:
+    return int(max(0, min(100, round(value))))
+
+
 class FredService:
     def is_available(self) -> bool:
         return bool(_API_KEY)
@@ -119,6 +123,72 @@ class FredService:
             }
 
         return results
+
+    def get_macro_intelligence(self) -> dict[str, Any]:
+        indicators = self.get_macro_snapshot()
+        fed = (indicators.get("fed_funds_rate") or {}).get("value")
+        cpi = (indicators.get("cpi_inflation") or {}).get("value")
+        cpi_prev = (indicators.get("cpi_inflation") or {}).get("previous")
+        unemployment = (indicators.get("unemployment") or {}).get("value")
+        unemployment_prev = (indicators.get("unemployment") or {}).get("previous")
+        gdp = (indicators.get("gdp_growth") or {}).get("value")
+        t10 = (indicators.get("10y_treasury") or {}).get("value")
+        t2 = (indicators.get("2y_treasury") or {}).get("value")
+        vix = (indicators.get("vix") or {}).get("value")
+        yield_spread = indicators.get("yield_curve_spread", {}).get("value")
+
+        fed_component = (fed or 0) / 6 * 100 if fed is not None else 45
+        t10_component = (t10 or 0) / 6 * 100 if t10 is not None else 45
+        rate_pressure = _clamp_score(max(fed_component, t10_component))
+
+        cpi_direction = 0
+        if cpi is not None and cpi_prev is not None:
+            cpi_direction = 12 if cpi > cpi_prev else -6 if cpi < cpi_prev else 0
+        inflation_pressure = _clamp_score(50 + cpi_direction + max(rate_pressure - 55, 0) * 0.25)
+
+        recession_risk = 25
+        if yield_spread is not None and yield_spread < 0:
+            recession_risk += 30
+        if unemployment is not None and unemployment_prev is not None and unemployment > unemployment_prev:
+            recession_risk += 15
+        if gdp is not None and gdp < 1:
+            recession_risk += 20
+        if vix is not None and vix > 25:
+            recession_risk += 15
+        recession_risk = _clamp_score(recession_risk)
+
+        volatility_pressure = _clamp_score(((vix or 18) - 12) / 25 * 100) if vix is not None else 45
+        risk_on_score = _clamp_score(100 - (rate_pressure * 0.3 + inflation_pressure * 0.2 + recession_risk * 0.3 + volatility_pressure * 0.2))
+
+        if risk_on_score >= 65 and recession_risk < 45:
+            macro_regime = "risk_on"
+        elif risk_on_score <= 40 or recession_risk >= 65:
+            macro_regime = "risk_off"
+        elif rate_pressure >= 70:
+            macro_regime = "restrictive_rates"
+        elif yield_spread is not None and yield_spread < 0:
+            macro_regime = "inverted_curve_caution"
+        else:
+            macro_regime = "mixed_macro"
+
+        return {
+            "available": True,
+            "source": "fred",
+            "indicators": indicators,
+            "scores": {
+                "risk_on_score": risk_on_score,
+                "inflation_pressure_score": inflation_pressure,
+                "rate_pressure_score": rate_pressure,
+                "recession_risk_score": recession_risk,
+                "volatility_pressure_score": volatility_pressure,
+            },
+            "macro_regime_label": macro_regime,
+            "summary": (
+                f"Macro regime is {macro_regime.replace('_', ' ')} with risk-on score {risk_on_score}/100, "
+                f"rate pressure {rate_pressure}/100, inflation pressure {inflation_pressure}/100, "
+                f"and recession risk {recession_risk}/100."
+            ),
+        }
 
     def get_indicator(self, series_id: str, limit: int = 12) -> dict[str, Any]:
         """Fetch historical observations for a specific FRED series."""
@@ -192,4 +262,5 @@ class FredService:
             "flags": flags,
             "risks": risks,
             "overall_assessment": overall,
+            "macro_intelligence": self.get_macro_intelligence(),
         }

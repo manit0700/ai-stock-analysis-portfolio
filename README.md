@@ -10,6 +10,7 @@ The current MVP includes:
 - research endpoints for single stocks, comparisons, news, simulation, and portfolio risk
 - a probability-based future chart simulation engine
 - bullish, bearish, sideways, and high-volatility scenario paths
+- signal promotion, scanner mode, signal ledger, and outcome resolution for paper-signal proof
 - AI-style reasoning summaries with risk notes and safety disclaimers
 - a Streamlit dashboard for stock buyers to explore the data visually
 - a premium Next.js/Tailwind UI concept in `frontend-next/`
@@ -113,6 +114,13 @@ Open the docs:
 - `GET /api/stocks/AAPL/simulation`
 - `GET /api/stocks/AAPL/news`
 - `POST /api/predict`
+- `GET /api/bot/scan`
+- `GET /api/bot/performance`
+- `GET /api/bot/historical-similarity?ticker=NVDA`
+- `POST /api/bot/explain`
+- `POST /api/bot/resolve-outcomes`
+- `GET /api/tools`
+- `POST /api/tools/{tool_name}`
 - `POST /api/stocks/compare`
 - `POST /api/stocks/watchlist`
 - `POST /api/portfolio/analyze`
@@ -151,6 +159,137 @@ Example prediction request:
 }
 ```
 
+## Signal Outcome Resolver
+
+MarketVision logs signal-bot outputs to `backend/data/signal_ledger.jsonl`. The resolver evaluates pending paper signals after their prediction window ends and marks each row as:
+
+- `resolved_win`
+- `resolved_loss`
+- `partial_win`
+- `invalid`
+- `still_pending`
+
+Resolution compares actual future high/low/close movement against the recorded entry, stop loss, target 1, and target 2. It is for research and paper-trading analytics only.
+
+Run it manually:
+
+```bash
+cd backend
+python scripts/resolve_signal_outcomes.py
+```
+
+Performance is available at `GET /api/bot/performance`, including total predictions, pending/resolved counts, win/loss/partial-win rates, promoted-signal performance, quality-label performance, and confidence-bucket performance.
+
+## Confidence Calibration
+
+The performance endpoint reports live calibration buckets:
+
+- `<50%`
+- `50-60%`
+- `60-70%`
+- `70-80%`
+- `80-90%`
+- `90%+`
+
+Each bucket includes coverage count, resolved count, accuracy, win rate, loss rate, partial-win rate, and average risk score. The Next.js UI shows this in the Scanner/Proof area so the project can prove whether model confidence is honest over time.
+
+## Historical Similarity Engine
+
+`GET /api/bot/historical-similarity?ticker=NVDA` compares the current setup against past setups using RSI, MACD, trend strength, volume spike, volatility, VWAP distance, market regime, VIX context, and sector strength where available.
+
+It returns similar historical dates, similarity score, average future return, bullish/bearish/sideways outcome rates, best case, worst case, and average drawdown. The simulation UI shows these as “Similar historical setups found” so the prediction has practical context instead of only a confidence number.
+
+## Monte Carlo Simulation Output
+
+Simulation responses include chart-ready Monte Carlo arrays under `monte_carlo_chart`:
+
+- main predicted path
+- bullish path
+- bearish path
+- sideways path
+- confidence upper/lower band
+- volatility cone p05/p95
+- expected final range
+
+The frontend renders historical candles separately from translucent AI-predicted candles and scenario paths, so users can visually distinguish real market history from probability-based future simulations.
+
+## FRED Macro Intelligence
+
+When `FRED_API_KEY` is configured, MarketVision fetches rates, CPI, unemployment, GDP growth, treasury yields, VIX, and yield-curve data. It converts those inputs into:
+
+- risk-on/risk-off score
+- inflation pressure score
+- rate pressure score
+- recession risk score
+- volatility pressure score
+- macro regime label
+
+Prediction explanations include macro context, for example restrictive rates, inverted yield-curve caution, or risk-off conditions. Macro is an auxiliary risk layer, not a standalone trading signal.
+
+## Intraday VWAP Layer
+
+The advanced engine loads intraday data when available:
+
+- 1-minute
+- 5-minute
+- 15-minute
+- 1-hour
+
+It calculates VWAP, price above/below VWAP, distance from VWAP, VWAP slope, reclaim/rejection state, and intraday volume-curve ratio. This layer is exposed in prediction intelligence and scanner rows without replacing the daily V12 model.
+
+## Scanner Ranking
+
+Scanner rows are ranked by quality label first, then final signal probability, confidence score, lower risk score, risk/reward ratio, historical similarity strength, sentiment score, and macro compatibility.
+
+Failed gates are exposed directly, including `confidence_failed`, `risk_failed`, `sentiment_failed`, `rr_failed`, `insufficient_data`, `macro_conflict`, and `weak_historical_similarity`.
+
+## Explanation Layer
+
+`POST /api/bot/explain` builds a prediction, extracts backend-provided facts, and generates a plain-language explanation. The LLM is only allowed to explain supplied facts; it is not used to invent probabilities, prices, or catalysts. If OpenAI is unavailable, the endpoint returns a deterministic fallback explanation.
+
+Every explanation includes: “This is a probability-based simulation, not financial advice.”
+
+## Execution-Realistic Backtesting
+
+Backtests now include execution assumptions for commission, spread, slippage, max position size, liquidity filtering, stop-loss checks, and target checks. Reports include win rate, profit factor, Sharpe ratio, max drawdown, average reward/risk, false positive rate, invalid trade count, and strategy type.
+
+These are still research fills, not proof of live execution quality.
+
+## Model Drift Monitoring
+
+`GET /api/bot/performance` includes a drift-monitoring block with recent live signal accuracy, high-confidence accuracy, confidence distribution, prediction distribution, feature-drift status, and warnings:
+
+- `model_performance_degraded`
+- `confidence_miscalibrated`
+- `regime_failure_detected`
+- `retraining_recommended`
+
+The drift layer uses resolved signal-ledger outcomes and becomes more useful as more paper signals mature.
+
+## Portfolio Intelligence
+
+Portfolio analysis accepts ticker, share quantity, and optional average cost. It returns total value, sector exposure, correlation risk, volatility risk, concentration risk, portfolio risk score, AI risk summary, unrealized P/L where cost basis is supplied, and suggested watchlist alerts.
+
+## MarketVision Tool Layer
+
+AI agents can call structured JSON tools through:
+
+- `GET /api/tools`
+- `POST /api/tools/{tool_name}`
+
+Available tools:
+
+- `get_live_quote`
+- `get_candles`
+- `calculate_indicators`
+- `predict_market_scenario`
+- `run_scanner`
+- `run_historical_similarity`
+- `run_monte_carlo`
+- `get_performance_metrics`
+- `explain_prediction`
+- `analyze_portfolio`
+
 ## Product Direction
 
 The real-world version of this project should stay focused on decision support:
@@ -163,6 +302,65 @@ The real-world version of this project should stay focused on decision support:
 - auto-tune model baselines locally or on Kaggle GPU using `ml/train_autotune.py`
 - use LLMs such as OpenAI/Grok/Claude for explanation, not as the only prediction engine
 - provide useful research context without crossing into personalized investment advice
+
+## Current Platform Capabilities
+
+MarketVision AI currently analyzes tickers with market data, technical indicators, intraday VWAP context, macro regime scores, sentiment, historical similarity, Monte Carlo paths, confidence/risk scoring, and a signal-promotion layer.
+
+Data used today:
+
+- OHLCV candles from market-data providers
+- live quotes where configured
+- FRED macro indicators
+- Finnhub/NewsAPI headlines where configured
+- FinBERT sentiment when available
+- V12 model artifacts and auxiliary policy outputs
+- local signal ledger outcomes
+
+Outputs generated:
+
+- bullish/bearish/sideways probabilities
+- confidence score
+- risk score
+- quality label
+- failed gates
+- predicted candles
+- Monte Carlo scenario paths
+- historical similarity outcomes
+- LLM explanation facts and explanation text
+- portfolio risk intelligence
+- calibration and drift metrics
+
+Signal promotion:
+
+Every ticker can receive a probability-based simulation. Only stronger setups are promoted into `high_confidence_trade_candidate`; weaker outputs remain `watchlist_candidate`, `prediction_only`, `avoid_high_risk`, or `insufficient_data`.
+
+Calibration:
+
+The platform tracks confidence buckets and resolved outcomes so confidence can be compared against realized paper-signal results over time.
+
+Historical similarity:
+
+The engine compares the current setup to past setups using technical, volatility, volume, VWAP, regime, sector, and sentiment-style features. It reports similar dates, average future return, bullish/bearish/sideways outcomes, best case, worst case, and drawdown.
+
+Monte Carlo simulation:
+
+The simulation engine returns main, bullish, bearish, sideways, confidence-band, and volatility-cone arrays for chart visualization. These are simulations, not guaranteed forecasts.
+
+Performance tracking:
+
+The signal ledger records paper signals, resolves outcomes after the prediction window, tracks promoted-signal performance, and reports drift warnings when enough resolved data exists.
+
+Still missing or partial:
+
+- true options flow and dark-pool data
+- real SEC filing/13F/insider ingestion
+- full social sentiment from Reddit/X
+- advanced sequence models in production serving
+- live brokerage execution
+- full MCP protocol server package; current implementation is a structured JSON tool layer
+
+All outputs must be framed as: “Probability-based market simulations and AI-generated financial intelligence, not financial advice.”
 
 ## Current Workflow
 

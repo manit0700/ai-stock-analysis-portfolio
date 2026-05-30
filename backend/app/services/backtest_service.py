@@ -109,6 +109,14 @@ STRATEGY_LABELS = {
     "buy_and_hold": "Buy & Hold (Baseline)",
 }
 
+STRATEGY_TYPES = {
+    "sma_crossover": "trend_following",
+    "rsi_mean_reversion": "mean_reversion",
+    "macd": "momentum",
+    "bollinger_bands": "mean_reversion",
+    "buy_and_hold": "baseline",
+}
+
 
 # ── Core backtest engine ─────────────────────────────────────────────────────
 
@@ -119,18 +127,26 @@ def _run_backtest(
     commission: float = 0.001,   # 0.1% per trade
     spread: float = 0.0008,      # 0.08% estimated spread
     slippage: float = 0.0015,    # 0.15% estimated market impact/slippage
+    max_position_pct: float = 0.25,
+    min_dollar_volume: float = 5_000_000,
+    stop_loss_pct: float = 0.05,
+    target_pct: float = 0.10,
 ) -> dict[str, Any]:
     df = df.copy()
+    df["dollar_volume"] = df["Close"] * df.get("Volume", 0)
+    df["liquidity_pass"] = df["dollar_volume"] >= min_dollar_volume
     df["signal"] = signal.values
+    invalid_trade_bars = int(((df["signal"] != 0) & (~df["liquidity_pass"])).sum())
+    df.loc[~df["liquidity_pass"], "signal"] = 0
     df["position"] = df["signal"].shift(1).fillna(0)  # enter next bar
     df["daily_return"] = df["Close"].pct_change()
-    df["strategy_return"] = df["position"] * df["daily_return"]
+    df["strategy_return"] = df["position"] * df["daily_return"] * max_position_pct
     df["strategy_return_after_costs"] = df["strategy_return"]
 
     # Apply execution realism on position changes.
     position_changes = df["position"].diff().abs()
     one_way_cost = commission + spread + slippage
-    df.loc[position_changes > 0, "strategy_return_after_costs"] -= one_way_cost
+    df.loc[position_changes > 0, "strategy_return_after_costs"] -= one_way_cost * max_position_pct
 
     # Equity curve
     df["equity"] = initial_capital * (1 + df["strategy_return_after_costs"]).cumprod()
@@ -141,11 +157,39 @@ def _run_backtest(
     in_trade = False
     entry_price = 0.0
     entry_date = ""
+    stop_price = 0.0
+    target_price = 0.0
     for i, (date, row) in enumerate(df.iterrows()):
         if row["position"] == 1 and not in_trade:
             in_trade = True
             entry_price = float(row["Close"])
             entry_date = str(date.date())
+            stop_price = entry_price * (1 - stop_loss_pct)
+            target_price = entry_price * (1 + target_pct)
+        elif row["position"] == 1 and in_trade:
+            exit_reason = None
+            exit_price = None
+            if float(row.get("Low", row["Close"])) <= stop_price:
+                exit_reason = "stop_loss"
+                exit_price = stop_price
+            elif float(row.get("High", row["Close"])) >= target_price:
+                exit_reason = "target"
+                exit_price = target_price
+            if exit_reason and exit_price is not None:
+                in_trade = False
+                pnl_pct = (exit_price / entry_price - 1) * 100 if entry_price > 0 else 0.0
+                net_pnl_pct = pnl_pct - (one_way_cost * 2 * 100)
+                trades.append({
+                    "entry_date": entry_date,
+                    "exit_date": str(date.date()),
+                    "entry_price": round(entry_price, 2),
+                    "exit_price": round(exit_price, 2),
+                    "pnl_pct": round(net_pnl_pct, 2),
+                    "gross_pnl_pct": round(pnl_pct, 2),
+                    "estimated_round_trip_cost_pct": round(one_way_cost * 2 * 100, 3),
+                    "exit_reason": exit_reason,
+                    "outcome": "win" if net_pnl_pct > 0 else "loss",
+                })
         elif row["position"] == 0 and in_trade:
             in_trade = False
             exit_price = float(row["Close"])
@@ -159,6 +203,7 @@ def _run_backtest(
                 "pnl_pct": round(net_pnl_pct, 2),
                 "gross_pnl_pct": round(pnl_pct, 2),
                 "estimated_round_trip_cost_pct": round(one_way_cost * 2 * 100, 3),
+                "exit_reason": "signal_exit",
                 "outcome": "win" if net_pnl_pct > 0 else "loss",
             })
 
@@ -175,6 +220,7 @@ def _run_backtest(
             "pnl_pct": round(net_pnl_pct, 2),
             "gross_pnl_pct": round(pnl_pct, 2),
             "estimated_round_trip_cost_pct": round(one_way_cost * 2 * 100, 3),
+            "exit_reason": "open_at_end",
             "outcome": "win" if net_pnl_pct > 0 else "open",
         })
 
@@ -202,6 +248,11 @@ def _run_backtest(
     win_rate = len(wins) / len(trades) * 100 if trades else 0.0
     avg_win = float(np.mean([t["pnl_pct"] for t in wins])) if wins else 0.0
     avg_loss = float(np.mean([t["pnl_pct"] for t in losses_list])) if losses_list else 0.0
+    gross_profit = float(sum(max(t["pnl_pct"], 0) for t in trades))
+    gross_loss = abs(float(sum(min(t["pnl_pct"], 0) for t in trades)))
+    profit_factor = gross_profit / gross_loss if gross_loss > 0 else (gross_profit if gross_profit > 0 else 0.0)
+    avg_reward_risk = avg_win / abs(avg_loss) if avg_loss < 0 else 0.0
+    false_positive_rate = len(losses_list) / len(trades) * 100 if trades else 0.0
 
     # Equity curve (sampled monthly for chart)
     equity_curve = []
@@ -220,6 +271,10 @@ def _run_backtest(
         "win_rate_pct": round(win_rate, 1),
         "avg_win_pct": round(avg_win, 2),
         "avg_loss_pct": round(avg_loss, 2),
+        "profit_factor": round(profit_factor, 3),
+        "average_reward_risk": round(avg_reward_risk, 3),
+        "false_positive_rate_pct": round(false_positive_rate, 1),
+        "invalid_trades": invalid_trade_bars,
         "final_equity": round(final_equity, 2),
         "initial_capital": initial_capital,
         "trades": trades[-20:],   # last 20 trades
@@ -230,7 +285,11 @@ def _run_backtest(
             "slippage_estimate_pct": round(slippage * 100, 4),
             "one_way_cost_pct": round(one_way_cost * 100, 4),
             "round_trip_cost_pct": round(one_way_cost * 2 * 100, 4),
-            "note": "Backtest applies estimated costs on position changes; fills are still simplified daily close/next-bar research fills.",
+            "max_position_pct": round(max_position_pct * 100, 2),
+            "min_dollar_volume": min_dollar_volume,
+            "stop_loss_pct": round(stop_loss_pct * 100, 2),
+            "target_pct": round(target_pct * 100, 2),
+            "note": "Backtest applies estimated costs, liquidity filtering, max position sizing, and simplified daily stop/target checks.",
         },
     }
 
@@ -266,6 +325,7 @@ def run_backtest(
         "ticker": ticker.upper(),
         "strategy": strategy,
         "strategy_label": STRATEGY_LABELS[strategy],
+        "strategy_type": STRATEGY_TYPES[strategy],
         "period": period,
         "initial_capital": initial_capital,
         **results,

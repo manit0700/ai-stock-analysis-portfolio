@@ -172,6 +172,24 @@ def _predicted_candles_from_path(
     return candles
 
 
+def _chart_ready_points(
+    values: list[float],
+    last_timestamp: datetime,
+    interval: str,
+    name: str,
+) -> list[dict[str, Any]]:
+    interval_delta = timedelta(seconds=_interval_seconds(interval))
+    return [
+        {
+            "date": (last_timestamp + interval_delta * (index + 1)).isoformat(),
+            "value": round(float(value), 2),
+            "series": name,
+            "is_prediction": True,
+        }
+        for index, value in enumerate(values)
+    ]
+
+
 class AdvancedMarketIntelligenceEngine:
     def __init__(
         self,
@@ -207,6 +225,7 @@ class AdvancedMarketIntelligenceEngine:
             base_history = self.market_service.get_history(ticker=ticker, period="1y", interval="1d")
 
         technical = self._technical_analysis(base_history)
+        intraday_vwap = self._intraday_vwap_layer(histories)
         market_structure = self._market_structure(base_history)
         timeframe = self._multi_timeframe_alignment(histories)
         regime = self._market_regime()
@@ -251,6 +270,7 @@ class AdvancedMarketIntelligenceEngine:
             "model_version": self.model_service.model_version if self.model_service is not None else None,
             "final_signal": final_signal,
             "technical_analysis": technical,
+            "intraday_vwap": intraday_vwap,
             "market_structure": market_structure,
             "multi_timeframe_alignment": timeframe,
             "market_regime": regime,
@@ -294,7 +314,7 @@ class AdvancedMarketIntelligenceEngine:
         intelligence = self.analyze(
             ticker=ticker,
             horizon_steps=horizon_steps,
-            include_intraday=interval != "1d",
+            include_intraday=True,
         )
         monte_carlo = intelligence["monte_carlo_simulation"]
         probabilities = intelligence["probabilities"]
@@ -327,6 +347,7 @@ class AdvancedMarketIntelligenceEngine:
             "ai_signal_bot": intelligence["ai_signal_bot"],
             "advanced_intelligence": {
                 "technical_analysis": intelligence["technical_analysis"],
+                "intraday_vwap": intelligence["intraday_vwap"],
                 "market_structure": intelligence["market_structure"],
                 "multi_timeframe_alignment": intelligence["multi_timeframe_alignment"],
                 "market_regime": intelligence["market_regime"],
@@ -356,6 +377,18 @@ class AdvancedMarketIntelligenceEngine:
                 "bearish": monte_carlo["bearish_path"],
                 "sideways": monte_carlo["sideways_path"],
                 "high_volatility": monte_carlo["volatility_cone"]["p95"],
+            },
+            "monte_carlo_chart": {
+                "main_predicted_path": _chart_ready_points(main_path, last_timestamp, interval, "main_predicted_path"),
+                "bullish_path": _chart_ready_points(monte_carlo["bullish_path"], last_timestamp, interval, "bullish_path"),
+                "bearish_path": _chart_ready_points(monte_carlo["bearish_path"], last_timestamp, interval, "bearish_path"),
+                "sideways_path": _chart_ready_points(monte_carlo["sideways_path"], last_timestamp, interval, "sideways_path"),
+                "confidence_upper": _chart_ready_points(confidence_band["upper"], last_timestamp, interval, "confidence_upper"),
+                "confidence_lower": _chart_ready_points(confidence_band["lower"], last_timestamp, interval, "confidence_lower"),
+                "volatility_cone_p05": _chart_ready_points(monte_carlo["volatility_cone"]["p05"], last_timestamp, interval, "volatility_cone_p05"),
+                "volatility_cone_p95": _chart_ready_points(monte_carlo["volatility_cone"]["p95"], last_timestamp, interval, "volatility_cone_p95"),
+                "expected_range": monte_carlo["expected_range"],
+                "method": monte_carlo["method"],
             },
             "predicted_prices": main_path,
             "predicted_candles": _predicted_candles_from_path(
@@ -479,6 +512,60 @@ class AdvancedMarketIntelligenceEngine:
             "breakout_probability_proxy": breakout_score,
             "reversal_probability_proxy": reversal_score,
             "volatility_expansion_proxy": volatility_expansion,
+        }
+
+    def _intraday_vwap_layer(self, histories: dict[str, pd.DataFrame]) -> dict[str, Any]:
+        rows: dict[str, Any] = {}
+        for timeframe in ["1m", "5m", "15m", "1h"]:
+            history = histories.get(timeframe)
+            if history is None or len(history) < 5:
+                rows[timeframe] = {"available": False}
+                continue
+
+            high = history["High"]
+            low = history["Low"]
+            close = history["Close"]
+            volume = history["Volume"]
+            typical = (high + low + close) / 3
+            session_key = pd.to_datetime(history.index).date
+            cumulative_pv = (typical * volume).groupby(session_key).cumsum()
+            cumulative_volume = volume.groupby(session_key).cumsum().replace(0, np.nan)
+            vwap = cumulative_pv / cumulative_volume
+            latest_vwap = float(vwap.iloc[-1]) if not pd.isna(vwap.iloc[-1]) else None
+            current = float(close.iloc[-1])
+            was_below = bool(close.iloc[-2] < vwap.iloc[-2]) if not pd.isna(vwap.iloc[-2]) else False
+            was_above = bool(close.iloc[-2] > vwap.iloc[-2]) if not pd.isna(vwap.iloc[-2]) else False
+            above = bool(latest_vwap is not None and current > latest_vwap)
+            distance = (current / latest_vwap - 1) * 100 if latest_vwap else None
+            slope = float(vwap.diff().tail(5).mean()) if len(vwap) >= 5 else None
+            average_volume = float(volume.tail(20).mean()) if len(volume) >= 20 else float(volume.mean())
+            volume_curve_ratio = float(volume.iloc[-1] / average_volume) if average_volume else None
+            rows[timeframe] = {
+                "available": True,
+                "vwap": _safe_float(latest_vwap, 2),
+                "price_above_vwap": above,
+                "distance_from_vwap_pct": _safe_float(distance, 3),
+                "vwap_slope": _safe_float(slope, 5),
+                "vwap_reclaim": bool(was_below and above),
+                "vwap_rejection": bool(was_above and not above),
+                "intraday_volume_curve_ratio": _safe_float(volume_curve_ratio, 3),
+            }
+
+        available_rows = [row for row in rows.values() if row.get("available")]
+        bullish_count = sum(1 for row in available_rows if row.get("price_above_vwap"))
+        bearish_count = len(available_rows) - bullish_count
+        if not available_rows:
+            alignment = "unavailable"
+        elif bullish_count >= max(1, len(available_rows) - 1):
+            alignment = "bullish_vwap_alignment"
+        elif bearish_count >= max(1, len(available_rows) - 1):
+            alignment = "bearish_vwap_alignment"
+        else:
+            alignment = "mixed_vwap_alignment"
+        return {
+            "available": bool(available_rows),
+            "alignment": alignment,
+            "timeframes": rows,
         }
 
     def _market_structure(self, history: pd.DataFrame) -> dict[str, Any]:
@@ -623,7 +710,7 @@ class AdvancedMarketIntelligenceEngine:
                 "missing": ["interest rates", "inflation", "GDP", "unemployment", "treasury yields", "Fed/CPI calendars"],
             }
         try:
-            return {"available": True, "source": "fred", "indicators": self.fred_service.get_macro_snapshot()}
+            return self.fred_service.get_macro_intelligence()
         except Exception:
             return {"available": False, "error": "Unable to fetch FRED macro snapshot."}
 
@@ -703,6 +790,7 @@ class AdvancedMarketIntelligenceEngine:
         features["momentum_5"] = close.pct_change(5)
         features["momentum_20"] = close.pct_change(20)
         features["volume_ratio"] = history["Volume"] / history["Volume"].rolling(20).mean()
+        features["trend_strength"] = close.pct_change(20)
         features = features.dropna()
         if len(features) < 60:
             return {"available": False, "reason": "not enough engineered history"}
@@ -721,11 +809,22 @@ class AdvancedMarketIntelligenceEngine:
             if pos + 10 >= len(history):
                 continue
             future_return = close.iloc[pos + 10] / close.iloc[pos] - 1
+            future_close = close.iloc[pos : pos + 11]
+            future_high = history["High"].iloc[pos : pos + 11]
+            future_low = history["Low"].iloc[pos : pos + 11]
+            entry_price = float(close.iloc[pos])
+            best_case = float(future_high.max() / entry_price - 1) if entry_price else 0.0
+            worst_case = float(future_low.min() / entry_price - 1) if entry_price else 0.0
+            running_peak = future_close.cummax()
+            drawdown = float((future_close / running_peak - 1).min()) if not future_close.empty else 0.0
             outcomes.append(
                 {
                     "date": pd.Timestamp(index).date().isoformat(),
                     "similarity_score": _safe_float(max(0.0, 1.0 - distance / 10), 4),
                     "future_10_bar_return_pct": _safe_float(future_return * 100, 3),
+                    "best_case_pct": _safe_float(best_case * 100, 3),
+                    "worst_case_pct": _safe_float(worst_case * 100, 3),
+                    "max_drawdown_pct": _safe_float(drawdown * 100, 3),
                     "outcome": "bullish" if future_return > 0.005 else ("bearish" if future_return < -0.005 else "sideways"),
                 }
             )
@@ -733,6 +832,9 @@ class AdvancedMarketIntelligenceEngine:
         if not outcomes:
             return {"available": False, "reason": "no valid future outcomes"}
         avg_return = float(np.mean([item["future_10_bar_return_pct"] for item in outcomes]))
+        best_case = float(max(item["best_case_pct"] for item in outcomes))
+        worst_case = float(min(item["worst_case_pct"] for item in outcomes))
+        avg_drawdown = float(np.mean([item["max_drawdown_pct"] for item in outcomes]))
         bullish = sum(1 for item in outcomes if item["outcome"] == "bullish") / len(outcomes)
         bearish = sum(1 for item in outcomes if item["outcome"] == "bearish") / len(outcomes)
         sideways = 1 - bullish - bearish
@@ -740,12 +842,26 @@ class AdvancedMarketIntelligenceEngine:
             "available": True,
             "average_similarity_score": _safe_float(np.mean([item["similarity_score"] for item in outcomes]), 4),
             "average_future_return_pct": _safe_float(avg_return, 3),
+            "best_case_pct": _safe_float(best_case, 3),
+            "worst_case_pct": _safe_float(worst_case, 3),
+            "average_drawdown_pct": _safe_float(avg_drawdown, 3),
             "outcome_probabilities": {
                 "bullish": _safe_float(bullish, 3),
                 "bearish": _safe_float(bearish, 3),
                 "sideways": _safe_float(sideways, 3),
             },
             "similar_setups": outcomes,
+            "current_setup_features": {
+                "rsi": technical.get("rsi_14"),
+                "macd": technical.get("macd_hist"),
+                "trend_strength": _safe_float(features["trend_strength"].iloc[-1] * 100, 3),
+                "volume_spike": technical.get("volume_ratio_20"),
+                "volatility": technical.get("volatility_30"),
+                "vwap_distance_pct": technical.get("vwap_distance_pct"),
+                "market_regime": regime.get("regime"),
+                "vix_level": regime.get("vix_level"),
+                "sector_strength": sector.get("sector_strength_score"),
+            },
             "context_used": {
                 "regime": regime.get("regime"),
                 "sector_leader": sector.get("leader"),
@@ -1186,6 +1302,8 @@ class AdvancedMarketIntelligenceEngine:
             facts.append(f"ATR risk is {technical.get('atr_pct')} of price.")
         if not macro.get("available"):
             facts.append("Macro data is partial or unavailable for this request.")
+        else:
+            facts.append(macro.get("summary") or f"Macro regime is {macro.get('macro_regime_label')}.")
         return facts or ["Market uncertainty still applies even when no major risk flag is active."]
 
     def _risk_score(self, technical: dict[str, Any], regime: dict[str, Any], macro: dict[str, Any]) -> int:
@@ -1204,6 +1322,14 @@ class AdvancedMarketIntelligenceEngine:
             score += 8
         if not macro.get("available"):
             score += 5
+        else:
+            scores = macro.get("scores") or {}
+            if (scores.get("recession_risk_score") or 0) >= 65:
+                score += 10
+            if (scores.get("rate_pressure_score") or 0) >= 75:
+                score += 8
+            if macro.get("macro_regime_label") == "risk_off":
+                score += 8
         return max(0, min(100, int(score)))
 
     def _confidence_score(

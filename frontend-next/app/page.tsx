@@ -36,6 +36,10 @@ function pct(n: number | null | undefined, decimals = 2) {
   if (n == null) return "—";
   return `${n > 0 ? "+" : ""}${n.toFixed(decimals)}%`;
 }
+function rate(n: number | null | undefined, decimals = 1) {
+  if (n == null) return "—";
+  return `${(n * 100).toFixed(decimals)}%`;
+}
 function usd(n: number | null | undefined) {
   if (n == null) return "—";
   return `$${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
@@ -446,7 +450,7 @@ function SimulationTab({
         >
           {["1m","5m","15m","30m","1h","4h","1d","1wk"].map((v) => <option key={v}>{v}</option>)}
         </select>
-        <button onClick={loadPrediction} disabled={isLoading} className="bb-btn">
+        <button onClick={() => loadPrediction()} disabled={isLoading} className="bb-btn">
           {isLoading ? "RUNNING..." : "RUN SIMULATION"}
         </button>
         <span className="text-[10px] bb-dim ml-4 truncate">{dataStatus}</span>
@@ -585,13 +589,17 @@ function SimulationTab({
                       {num(similarity.average_future_return_pct, 2)}%
                     </div>
                   </div>
+                  <Stat label="best case" value={`${num(similarity.best_case_pct, 2)}%`} cls="bb-green" />
+                  <Stat label="avg drawdown" value={`${num(similarity.average_drawdown_pct, 2)}%`} cls="bb-red" />
                 </div>
+                <div className="bb-amber text-[10px] uppercase tracking-widest">Similar historical setups found</div>
                 {((similarity.similar_setups as unknown[]) ?? []).slice(0, 3).map((setup, i) => {
                   const row = setup as Record<string, unknown>;
                   return (
                     <div key={`${row.date}-${i}`} className="flex justify-between gap-2 border-t border-[#ff8c0010] pt-1">
                       <span className="bb-dim">{String(row.date ?? "—")}</span>
                       <span className={row.outcome === "bullish" ? "bb-green" : row.outcome === "bearish" ? "bb-red" : "bb-amber"}>{String(row.outcome ?? "—").toUpperCase()}</span>
+                      <span className="bb-amber">{num((row.similarity_score as number | undefined) ? (row.similarity_score as number) * 100 : undefined, 1)}%</span>
                       <span className="bb-white">{num(row.future_10_bar_return_pct, 2)}%</span>
                     </div>
                   );
@@ -708,8 +716,8 @@ function PortfolioTab({
   portfolioRows, setPortfolioRows, runPortfolioAnalysis, portfolioLoading,
   portfolioError, portfolioResult,
 }: {
-  portfolioRows: { ticker: string; shares: string }[];
-  setPortfolioRows: (r: { ticker: string; shares: string }[]) => void;
+  portfolioRows: { ticker: string; shares: string; averageCost: string }[];
+  setPortfolioRows: (r: { ticker: string; shares: string; averageCost: string }[]) => void;
   runPortfolioAnalysis: () => void;
   portfolioLoading: boolean; portfolioError: string | null;
   portfolioResult: PortfolioAnalysis | null;
@@ -742,6 +750,17 @@ function PortfolioTab({
                 className="bb-input w-20 text-xs"
                 placeholder="shares"
               />
+              <input
+                value={row.averageCost}
+                onChange={(e) => {
+                  const next = [...portfolioRows];
+                  next[i] = { ...next[i], averageCost: e.target.value };
+                  setPortfolioRows(next);
+                }}
+                type="number" min="0"
+                className="bb-input w-20 text-xs"
+                placeholder="avg cost"
+              />
               <button
                 onClick={() => setPortfolioRows(portfolioRows.filter((_, j) => j !== i))}
                 className="text-[10px] bb-red hover:opacity-70"
@@ -751,7 +770,7 @@ function PortfolioTab({
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => setPortfolioRows([...portfolioRows, { ticker: "", shares: "" }])}
+            onClick={() => setPortfolioRows([...portfolioRows, { ticker: "", shares: "", averageCost: "" }])}
             className="bb-btn text-[10px] flex-1"
           >+ ADD ROW</button>
           <button
@@ -772,6 +791,7 @@ function PortfolioTab({
                 ["SHARPE RATIO", portfolioResult.sharpe_ratio.toFixed(2), portfolioResult.sharpe_ratio >= 1 ? "bb-green" : "bb-amber"],
                 ["MAX DRAWDOWN", `${portfolioResult.max_drawdown_pct.toFixed(1)}%`, "bb-red"],
                 ["DIVERSIFICATION", `${portfolioResult.diversification_score.toFixed(0)}/100`, "bb-white"],
+                ["AI RISK", portfolioResult.portfolio_risk_score == null ? "—" : `${portfolioResult.portfolio_risk_score}/100`, (portfolioResult.portfolio_risk_score ?? 0) >= 70 ? "bb-red" : "bb-amber"],
               ].map(([label, value, cls]) => (
                 <div key={label as string} className="flex justify-between t-row py-1.5">
                   <span className="bb-dim">{label}</span>
@@ -782,6 +802,7 @@ function PortfolioTab({
             {portfolioResult.warnings.map((w) => (
               <div key={w} className="mt-2 text-[10px] bb-amber border border-[#ff8c0025] p-2">⚠ {w}</div>
             ))}
+            {portfolioResult.ai_risk_summary && <p className="mt-3 text-[10px] leading-4 bb-dim">{portfolioResult.ai_risk_summary}</p>}
           </div>
         )}
       </Panel>
@@ -796,13 +817,37 @@ function PortfolioTab({
                   <div key={h.ticker}>
                     <div className="flex justify-between text-xs mb-1">
                       <span className="bb-amber font-bold">{h.ticker}</span>
-                      <span className="bb-dim">{h.shares} shares · {usd(h.market_value)} · <span className="bb-white font-bold">{h.weight_pct.toFixed(1)}%</span></span>
+                      <span className="bb-dim">{h.shares} shares · {h.sector ?? "Unknown"} · {usd(h.market_value)} · <span className="bb-white font-bold">{h.weight_pct.toFixed(1)}%</span>{h.unrealized_pnl_pct != null && <span className={h.unrealized_pnl_pct >= 0 ? "bb-green" : "bb-red"}> · {pct(h.unrealized_pnl_pct)}</span>}</span>
                     </div>
                     <div className="bb-bar-track">
                       <div className="bb-bar-fill" style={{ width: `${h.weight_pct}%` }} />
                     </div>
                   </div>
                 ))}
+              </div>
+            </Panel>
+
+            <Panel title="── PORTFOLIO INTELLIGENCE ───────────────────────────────────────────────────────" innerClass="p-4">
+              <div className="grid grid-cols-4 gap-2 mb-3">
+                <Stat label="concentration" value={portfolioResult.concentration_risk == null ? "—" : `${portfolioResult.concentration_risk}/100`} cls={(portfolioResult.concentration_risk ?? 0) >= 70 ? "bb-red" : "bb-white"} />
+                <Stat label="correlation" value={portfolioResult.correlation_risk == null ? "—" : `${portfolioResult.correlation_risk}/100`} cls={(portfolioResult.correlation_risk ?? 0) >= 60 ? "bb-red" : "bb-white"} />
+                <Stat label="volatility" value={portfolioResult.volatility_risk == null ? "—" : `${portfolioResult.volatility_risk}/100`} cls={(portfolioResult.volatility_risk ?? 0) >= 70 ? "bb-red" : "bb-white"} />
+                <Stat label="portfolio risk" value={portfolioResult.portfolio_risk_score == null ? "—" : `${portfolioResult.portfolio_risk_score}/100`} cls={(portfolioResult.portfolio_risk_score ?? 0) >= 70 ? "bb-red" : "bb-amber"} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-[10px] bb-dim mb-2">SECTOR EXPOSURE</p>
+                  {Object.entries(portfolioResult.sector_exposure ?? {}).map(([sector, value]) => (
+                    <div key={sector} className="flex justify-between t-row py-1 text-[11px]">
+                      <span className="bb-dim">{sector}</span><span className="bb-white font-bold">{value.toFixed(1)}%</span>
+                    </div>
+                  ))}
+                </div>
+                <div>
+                  <p className="text-[10px] bb-dim mb-2">WATCHLIST ALERTS</p>
+                  {(portfolioResult.suggested_watchlist_alerts ?? []).map((alert) => <p key={alert} className="text-[11px] bb-amber border-l-2 border-[#ff8c0040] pl-2 mb-1">{alert}</p>)}
+                  {!(portfolioResult.suggested_watchlist_alerts ?? []).length && <p className="text-[11px] bb-dim">NO PORTFOLIO ALERTS</p>}
+                </div>
               </div>
             </Panel>
 
@@ -925,6 +970,8 @@ function MacroTab({ macroCond }: { macroCond: MacroConditions | null }) {
   if (!macroCond?.available) {
     return <div className="h-full flex items-center justify-center bb-dim text-sm tracking-widest">FRED API UNAVAILABLE</div>;
   }
+  const macroIntel = macroCond.macro_intelligence;
+  const scores = macroIntel?.scores ?? {};
   return (
     <div className="h-full grid grid-cols-3 gap-px bg-[#ff8c0010]">
       <Panel title="── MONETARY POLICY ─────────────────────────────────────────────" innerClass="p-3">
@@ -993,7 +1040,17 @@ function MacroTab({ macroCond }: { macroCond: MacroConditions | null }) {
             : macroCond.overall_assessment === "cautious" ? "bb-red"
             : "bb-amber"
           }`}>{macroCond.overall_assessment.toUpperCase()}</p>
+          {macroIntel?.macro_regime_label && (
+            <p className="text-xs bb-amber font-bold mt-2">{macroIntel.macro_regime_label.replaceAll("_", " ").toUpperCase()}</p>
+          )}
         </div>
+        <div className="grid grid-cols-2 gap-2">
+          <Stat label="risk on" value={scores.risk_on_score == null ? "—" : `${scores.risk_on_score}/100`} cls={(scores.risk_on_score ?? 0) >= 60 ? "bb-green" : "bb-red"} />
+          <Stat label="rate pressure" value={scores.rate_pressure_score == null ? "—" : `${scores.rate_pressure_score}/100`} cls={(scores.rate_pressure_score ?? 0) >= 70 ? "bb-red" : "bb-white"} />
+          <Stat label="inflation" value={scores.inflation_pressure_score == null ? "—" : `${scores.inflation_pressure_score}/100`} cls={(scores.inflation_pressure_score ?? 0) >= 70 ? "bb-red" : "bb-white"} />
+          <Stat label="recession" value={scores.recession_risk_score == null ? "—" : `${scores.recession_risk_score}/100`} cls={(scores.recession_risk_score ?? 0) >= 65 ? "bb-red" : "bb-amber"} />
+        </div>
+        {macroIntel?.summary && <p className="text-[10px] bb-dim leading-4 mt-3">{macroIntel.summary}</p>}
         <div className="space-y-2 mt-4">
           <p className="text-[10px] bb-dim">FLAGS:</p>
           {macroCond.flags.map((f) => <p key={f} className="text-[11px] bb-white border-l-2 border-[#ff8c0040] pl-2">{f}</p>)}
@@ -1199,10 +1256,15 @@ function BacktestTab({
                   {[
                     ["Total Trades", btResult.total_trades.toString(), "bb-white"],
                     ["Win Rate", `${btResult.win_rate_pct.toFixed(1)}%`, btResult.win_rate_pct >= 50 ? "bb-green" : "bb-red"],
+                    ["Profit Factor", btResult.profit_factor == null ? "—" : btResult.profit_factor.toFixed(3), (btResult.profit_factor ?? 0) >= 1.2 ? "bb-green" : "bb-red"],
+                    ["Avg Reward/Risk", btResult.average_reward_risk == null ? "—" : btResult.average_reward_risk.toFixed(3), (btResult.average_reward_risk ?? 0) >= 1 ? "bb-green" : "bb-red"],
+                    ["False Positive", btResult.false_positive_rate_pct == null ? "—" : `${btResult.false_positive_rate_pct.toFixed(1)}%`, "bb-red"],
+                    ["Invalid Trades", btResult.invalid_trades == null ? "—" : String(btResult.invalid_trades), "bb-amber"],
                     ["Avg Win", `+${btResult.avg_win_pct.toFixed(2)}%`, "bb-green"],
                     ["Avg Loss", `${btResult.avg_loss_pct.toFixed(2)}%`, "bb-red"],
                     ["Round Trip Cost", btResult.execution_assumptions ? `${btResult.execution_assumptions.round_trip_cost_pct.toFixed(3)}%` : "—", "bb-amber"],
                     ["Slippage", btResult.execution_assumptions ? `${btResult.execution_assumptions.slippage_estimate_pct.toFixed(3)}%` : "—", "bb-white"],
+                    ["Max Position", btResult.execution_assumptions?.max_position_pct == null ? "—" : `${btResult.execution_assumptions.max_position_pct.toFixed(1)}%`, "bb-white"],
                   ].map(([label, value, cls]) => (
                     <tr key={label as string} className="t-row">
                       <td className="py-1.5 pr-3 bb-dim">{label}</td>
@@ -1306,6 +1368,9 @@ function ScannerTab({
 }) {
   const buckets = scanResult?.quality_buckets ?? {};
   const proof80 = performance?.v12_walk_forward_proof?.confidence_buckets?.[">=80%"];
+  const calibrationRows = Object.entries(performance?.confidence_bucket_performance ?? {})
+    .filter(([, row]) => row.count > 0)
+    .slice(-3);
   return (
     <div className="h-full grid grid-rows-[auto_1fr] gap-px bg-[#ff8c0010]">
       <div className="t-panel shrink-0 flex items-center gap-3 px-4 py-2">
@@ -1337,28 +1402,38 @@ function ScannerTab({
                 <th className="text-left p-2 pl-3">Ticker</th>
                 <th className="text-left p-2">Quality</th>
                 <th className="text-left p-2">Action</th>
+                <th className="text-right p-2">Prob</th>
                 <th className="text-right p-2">Conf</th>
                 <th className="text-right p-2">Risk</th>
                 <th className="text-right p-2">R/R</th>
+                <th className="text-right p-2">Hist</th>
+                <th className="text-left p-2">VWAP</th>
                 <th className="text-left p-2">Failed Gates</th>
               </tr>
             </thead>
             <tbody>
-              {(scanResult?.results ?? []).map((row) => (
+              {(scanResult?.results ?? []).map((row) => {
+                const vwap = row.intraday_vwap as { alignment?: string } | undefined;
+                return (
                 <tr key={row.ticker} className="t-row">
                   <td className="p-2 pl-3 bb-amber font-bold">{row.ticker}</td>
                   <td className={`p-2 font-bold ${row.quality_label === "high_confidence_trade_candidate" ? "bb-green" : row.quality_label === "avoid_high_risk" ? "bb-red" : "bb-white"}`}>
                     {(row.quality_label ?? "ERROR").replaceAll("_", " ").toUpperCase()}
                   </td>
                   <td className="p-2 bb-white">{(row.action ?? "—").replaceAll("_", " ").toUpperCase()}</td>
+                  <td className="p-2 text-right bb-white">{row.final_signal_probability == null ? "—" : rate(row.final_signal_probability)}</td>
                   <td className="p-2 text-right bb-white">{row.confidence?.toFixed(1) ?? "—"}%</td>
                   <td className={`p-2 text-right font-bold ${(row.risk_score ?? 0) >= 70 ? "bb-red" : "bb-white"}`}>{row.risk_score ?? "—"}</td>
                   <td className="p-2 text-right bb-white">{row.trade_plan?.risk_reward_target_1?.toFixed(2) ?? "—"}</td>
+                  <td className="p-2 text-right bb-amber">{row.historical_similarity_strength == null ? "—" : rate(row.historical_similarity_strength)}</td>
+                  <td className={`p-2 text-[10px] ${vwap?.alignment?.includes("bullish") ? "bb-green" : vwap?.alignment?.includes("bearish") ? "bb-red" : "bb-dim"}`}>
+                    {vwap?.alignment?.replaceAll("_", " ").toUpperCase() ?? "—"}
+                  </td>
                   <td className="p-2 bb-dim text-[10px]">{row.failed_gates?.join(", ").replaceAll("_", " ") || "PASS"}</td>
                 </tr>
-              ))}
+              );})}
               {!scanResult && (
-                <tr><td colSpan={7} className="p-8 text-center bb-dim">RUN SCANNER TO RANK UNIVERSAL PREDICTIONS</td></tr>
+                <tr><td colSpan={10} className="p-8 text-center bb-dim">RUN SCANNER TO RANK UNIVERSAL PREDICTIONS</td></tr>
               )}
             </tbody>
           </table>
@@ -1378,6 +1453,15 @@ function ScannerTab({
               <div><span className="bb-dim">PENDING OUTCOMES: </span><span className="bb-amber font-bold">{performance?.pending_outcomes ?? 0}</span></div>
               <div><span className="bb-dim">LIVE WIN RATE: </span><span className="bb-white">{performance?.resolved_win_rate == null ? "PENDING" : `${(performance.resolved_win_rate * 100).toFixed(1)}%`}</span></div>
               {proof80 && <div><span className="bb-dim">V12 PROOF @80: </span><span className="bb-green font-bold">{((proof80.accuracy ?? 0) * 100).toFixed(1)}%</span><span className="bb-dim"> / {proof80.signals} signals</span></div>}
+              <div className="pt-1 space-y-1">
+                {calibrationRows.map(([bucket, row]) => (
+                  <div key={bucket} className="flex justify-between gap-2 border-t border-[#ff8c0010] pt-1">
+                    <span className="bb-dim">{bucket}</span>
+                    <span className="bb-white">ACC {row.accuracy == null ? "PENDING" : rate(row.accuracy)}</span>
+                    <span className="bb-dim">N {row.count}</span>
+                  </div>
+                ))}
+              </div>
               <p className="bb-dim leading-4 pt-2">{performance?.note ?? "Live calibration appears after future outcomes are resolved."}</p>
             </div>
           </Panel>
@@ -1395,9 +1479,10 @@ function ProofDashboardTab({
   resolveOutcomes: () => void;
 }) {
   const proofBuckets = performance?.v12_walk_forward_proof?.confidence_buckets ?? {};
-  const liveBuckets = performance?.confidence_buckets ?? {};
+  const liveBuckets = performance?.confidence_bucket_performance ?? {};
   const qualityRows = Object.entries(performance?.quality_performance ?? {});
   const actionRows = Object.entries(performance?.action_performance ?? {});
+  const calibrationOrder = ["50-60%", "60-70%", "70-80%", "80-90%", "90%+"];
   return (
     <div className="h-full grid grid-rows-[auto_1fr] gap-px bg-[#ff8c0010]">
       <div className="t-panel shrink-0 flex items-center gap-3 px-4 py-2">
@@ -1429,6 +1514,8 @@ function ProofDashboardTab({
             <div className="space-y-2 text-xs">
               <div><span className="bb-dim">ACTIVE SETUP ACC: </span><span className="bb-white font-bold">{performance?.v12_walk_forward_proof?.accuracy == null ? "—" : `${(performance.v12_walk_forward_proof.accuracy * 100).toFixed(1)}%`}</span></div>
               <div><span className="bb-dim">SETUP COVERAGE: </span><span className="bb-white">{performance?.v12_walk_forward_proof?.setup_coverage_test == null ? "—" : `${(performance.v12_walk_forward_proof.setup_coverage_test * 100).toFixed(2)}%`}</span></div>
+              <div><span className="bb-dim">DRIFT WARNINGS: </span><span className={(performance?.drift_monitoring?.warnings?.length ?? 0) ? "bb-red font-bold" : "bb-green font-bold"}>{performance?.drift_monitoring?.warnings?.length ? performance.drift_monitoring.warnings.join(", ").replaceAll("_", " ").toUpperCase() : "NONE"}</span></div>
+              <div><span className="bb-dim">RECENT LIVE ACC: </span><span className="bb-white">{performance?.drift_monitoring?.live_signal_accuracy == null ? "PENDING" : rate(performance.drift_monitoring.live_signal_accuracy)}</span></div>
               <p className="pt-2 text-[10px] leading-4 bb-dim">{performance?.accuracy_policy ?? "Only claim high-confidence accuracy when bucket accuracy and coverage are both disclosed."}</p>
             </div>
           </Panel>
@@ -1439,33 +1526,52 @@ function ProofDashboardTab({
             <thead>
               <tr className="text-[9px] bb-dim uppercase tracking-widest border-b border-[#ff8c0015]">
                 <th className="text-left p-2 pl-3">Bucket</th>
-                <th className="text-right p-2">V12 Accuracy</th>
-                <th className="text-right p-2">V12 Signals</th>
-                <th className="text-right p-2">Live Count</th>
+                <th className="text-right p-2">Coverage</th>
                 <th className="text-right p-2">Resolved</th>
-                <th className="text-right p-2">Live Win</th>
+                <th className="text-right p-2">Accuracy</th>
+                <th className="text-right p-2">Win</th>
+                <th className="text-right p-2">Loss</th>
+                <th className="text-right p-2">Partial</th>
+                <th className="text-right p-2">Avg Risk</th>
               </tr>
             </thead>
             <tbody>
-              {[">=60%", ">=70%", ">=80%", ">=85%"].map((bucket) => {
-                const liveKey = bucket.replace("%", "");
-                const proof = proofBuckets[bucket];
-                const live = liveBuckets[liveKey];
+              {calibrationOrder.map((bucket) => {
+                const live = liveBuckets[bucket];
                 return (
                   <tr key={bucket} className="t-row">
                     <td className="p-2 pl-3 bb-amber font-bold">{bucket}</td>
-                    <td className="p-2 text-right bb-white">{proof?.accuracy == null ? "—" : `${(proof.accuracy * 100).toFixed(1)}%`}</td>
-                    <td className="p-2 text-right bb-dim">{proof?.signals ?? "—"}</td>
                     <td className="p-2 text-right bb-white">{live?.count ?? 0}</td>
                     <td className="p-2 text-right bb-white">{live?.resolved ?? 0}</td>
-                    <td className={`p-2 text-right font-bold ${live?.win_rate == null ? "bb-dim" : live.win_rate >= 0.6 ? "bb-green" : "bb-red"}`}>
-                      {live?.win_rate == null ? "PENDING" : `${(live.win_rate * 100).toFixed(1)}%`}
+                    <td className={`p-2 text-right font-bold ${live?.accuracy == null ? "bb-dim" : live.accuracy >= 0.6 ? "bb-green" : "bb-red"}`}>
+                      {live?.accuracy == null ? "PENDING" : rate(live.accuracy)}
                     </td>
+                    <td className="p-2 text-right bb-green">{live?.win_rate == null ? "—" : rate(live.win_rate)}</td>
+                    <td className="p-2 text-right bb-red">{live?.loss_rate == null ? "—" : rate(live.loss_rate)}</td>
+                    <td className="p-2 text-right bb-amber">{live?.partial_win_rate == null ? "—" : rate(live.partial_win_rate)}</td>
+                    <td className="p-2 text-right bb-white">{live?.average_risk_score == null ? "—" : live.average_risk_score.toFixed(1)}</td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
+          <div className="border-t border-[#ff8c0015] p-3 text-[10px] leading-4 bb-dim">
+            Calibration checks whether confidence is honest. Example: an 80-90% bucket should only earn that label if resolved outcomes land near that range over time.
+            V12 offline proof still appears below for historical walk-forward context.
+            <div className="grid grid-cols-4 gap-2 pt-3">
+              {[">=60%", ">=70%", ">=80%", ">=85%"].map((bucket) => {
+                const proof = proofBuckets[bucket];
+                return (
+                  <Stat
+                    key={bucket}
+                    label={`v12 ${bucket}`}
+                    value={proof?.accuracy == null ? "—" : rate(proof.accuracy)}
+                    cls={proof?.accuracy == null ? "bb-dim" : "bb-green"}
+                  />
+                );
+              })}
+            </div>
+          </div>
         </Panel>
 
         <div className="flex flex-col gap-px bg-[#ff8c0010] overflow-hidden">
@@ -1553,9 +1659,9 @@ export default function Home() {
 
   // ── Portfolio state ─────────────────────────────────────────────
   const [portfolioRows, setPortfolioRows] = useState([
-    { ticker: "AAPL", shares: "10" },
-    { ticker: "NVDA", shares: "5" },
-    { ticker: "MSFT", shares: "8" },
+    { ticker: "AAPL", shares: "10", averageCost: "" },
+    { ticker: "NVDA", shares: "5", averageCost: "" },
+    { ticker: "MSFT", shares: "8", averageCost: "" },
   ]);
   const [portfolioResult, setPortfolioResult] = useState<PortfolioAnalysis | null>(null);
   const [portfolioLoading, setPortfolioLoading] = useState(false);
@@ -1599,9 +1705,10 @@ export default function Home() {
   const [apiStatus, setApiStatus] = useState({ finnhub: false, openai: false, fred: false, newsapi: false });
 
   // ── Functions ───────────────────────────────────────────────────
-  async function loadPrediction(nextTicker = ticker, nextPeriod = period, nextInterval = simInterval) {
+  async function loadPrediction(nextTicker?: string, nextPeriod = period, nextInterval = simInterval) {
+    const safeTicker = typeof nextTicker === "string" ? nextTicker : ticker;
     const request = {
-      ticker: nextTicker.trim().toUpperCase(),
+      ticker: safeTicker.trim().toUpperCase(),
       period: nextPeriod,
       interval: nextInterval,
     };
@@ -1682,7 +1789,11 @@ export default function Home() {
     setPortfolioLoading(true);
     setPortfolioError(null);
     try {
-      const holdings = valid.map((r) => ({ ticker: r.ticker.trim().toUpperCase(), shares: Number(r.shares) }));
+      const holdings = valid.map((r) => ({
+        ticker: r.ticker.trim().toUpperCase(),
+        shares: Number(r.shares),
+        average_cost: Number(r.averageCost) > 0 ? Number(r.averageCost) : null,
+      }));
       setPortfolioResult(await analyzePortfolio(holdings, "1y"));
     } catch (err) {
       setPortfolioError(err instanceof Error ? err.message : "Analysis failed.");
