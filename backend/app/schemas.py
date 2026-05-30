@@ -42,6 +42,16 @@ class ToolCallRequest(BaseModel):
     arguments: dict = Field(default_factory=dict)
 
 
+class AgentReportRequest(BaseModel):
+    prompt: str = Field(default="Find today's best trade candidates", min_length=2, max_length=500)
+    universe: str = Field(default="mega_cap_ai", min_length=2, max_length=40)
+    tickers: str | None = Field(default=None, max_length=500)
+    period: str = Field(default="5d", min_length=2, max_length=10)
+    interval: str = Field(default="1d", min_length=2, max_length=10)
+    horizon_steps: int = Field(default=12, ge=4, le=60)
+    max_candidates: int = Field(default=5, ge=1, le=10)
+
+
 class NewsItem(BaseModel):
     title: str
     publisher: str | None = None

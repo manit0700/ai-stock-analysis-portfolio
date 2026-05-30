@@ -1,4 +1,4 @@
-import type { BacktestResult, BotExplanationResponse, BotHistoricalSimilarityResult, BotPerformanceResponse, BotScanResponse, CompareResult, CopilotChatResponse, HealthResponse, MacroConditions, MarketOverviewResponse, NewsItem, PortfolioAnalysis, SimulationResponse, SimilarityResult, StockAnalysis, StockOverview, WatchlistResponse } from "./types";
+import type { AgentReportResponse, BacktestResult, BotExplanationResponse, BotHistoricalSimilarityResult, BotPerformanceResponse, BotScanResponse, CompareResult, CopilotChatResponse, HealthResponse, MacroConditions, MarketOverviewResponse, NewsItem, PortfolioAnalysis, SimulationResponse, SimilarityResult, StockAnalysis, StockOverview, WatchlistResponse } from "./types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
 
@@ -64,6 +64,21 @@ export async function copilotChat(
   return apiFetch<CopilotChatResponse>("/api/copilot/chat", {
     method: "POST",
     body: JSON.stringify({ message, context, history }),
+  });
+}
+
+export async function runAgentTradeCandidates(payload: {
+  prompt: string;
+  universe?: string;
+  tickers?: string | null;
+  period?: string;
+  interval?: string;
+  horizon_steps?: number;
+  max_candidates?: number;
+}): Promise<AgentReportResponse> {
+  return apiFetch<AgentReportResponse>("/api/agents/trade-candidates", {
+    method: "POST",
+    body: JSON.stringify(payload),
   });
 }
 

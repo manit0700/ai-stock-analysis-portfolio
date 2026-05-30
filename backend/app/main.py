@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import time
+import os
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from pydantic import BaseModel
 
-from app.schemas import PortfolioAnalysisRequest, PredictionRequest, TickerListRequest, ToolCallRequest
+from app.schemas import AgentReportRequest, PortfolioAnalysisRequest, PredictionRequest, TickerListRequest, ToolCallRequest
+from app.services.agent_orchestrator import build_trade_candidate_report
 from app.services.copilot_service import CopilotService
 from app.services.advanced_intelligence import AdvancedMarketIntelligenceEngine
 from app.services.finnhub_service import FinnhubService
@@ -22,6 +24,8 @@ from app.services.newsapi_service import NewsApiService
 from app.services.portfolio import PortfolioService
 from app.services.signal_ledger import record_signal, resolve_pending_signals, summarize_signals
 from app.services.simulation import SimulationService
+from app.services.tool_catalog import DISCLAIMER as TOOL_DISCLAIMER
+from app.services.tool_catalog import TOOL_CATALOG, list_tools
 
 app = FastAPI(
     title="AI Stock Analysis MVP",
@@ -65,18 +69,14 @@ SCAN_UNIVERSES = {
     "sp500_sample": "AAPL,MSFT,NVDA,AMZN,META,GOOGL,BRK-B,LLY,JPM,AVGO,XOM,TSLA,UNH,V,MA,COST,PG,HD,NFLX,JNJ",
 }
 
-TOOL_DEFINITIONS = {
-    "get_live_quote": "Return latest quote for a ticker.",
-    "get_candles": "Return OHLCV candles for a ticker, period, and interval.",
-    "calculate_indicators": "Return stock overview/analysis indicators.",
-    "predict_market_scenario": "Return MarketVision probability simulation.",
-    "run_scanner": "Run ranked bot scanner over tickers.",
-    "run_historical_similarity": "Return similar historical setups.",
-    "run_monte_carlo": "Return chart-ready Monte Carlo paths.",
-    "get_performance_metrics": "Return signal ledger, calibration, and drift metrics.",
-    "explain_prediction": "Return fact-grounded prediction explanation.",
-    "analyze_portfolio": "Return portfolio intelligence.",
-}
+TOOL_TOKEN = os.getenv("MARKETVISION_TOOL_TOKEN", "")
+
+
+def _require_tool_auth(authorization: str | None) -> None:
+    if not TOOL_TOKEN:
+        return
+    if authorization != f"Bearer {TOOL_TOKEN}":
+        raise HTTPException(status_code=401, detail="MarketVision tool token required")
 
 
 def _record_bot_signal(ticker: str, simulation: dict, source: str) -> None:
@@ -140,19 +140,63 @@ def healthcheck() -> dict[str, str | bool]:
 
 
 @app.get("/api/tools")
-def list_marketvision_tools() -> dict:
+def list_marketvision_tools(authorization: str | None = Header(default=None)) -> dict:
+    _require_tool_auth(authorization)
     return {
-        "tools": [
-            {"name": name, "description": description, "returns": "structured_json"}
-            for name, description in TOOL_DEFINITIONS.items()
-        ],
-        "disclaimer": "MarketVision tools return probability-based market simulations and AI-generated financial intelligence, not financial advice.",
+        "tools": list_tools(),
+        "auth": {"enabled": bool(TOOL_TOKEN), "scheme": "Bearer"},
+        "disclaimer": TOOL_DISCLAIMER,
     }
 
 
 @app.post("/api/tools/{tool_name}")
-def call_marketvision_tool(tool_name: str, request: ToolCallRequest) -> dict:
-    args = request.arguments
+def call_marketvision_tool(tool_name: str, request: ToolCallRequest, authorization: str | None = Header(default=None)) -> dict:
+    _require_tool_auth(authorization)
+    return _execute_marketvision_tool(tool_name, request.arguments)
+
+
+def _compact_prediction(simulation: dict) -> dict:
+    bot = simulation.get("ai_signal_bot") or {}
+    return {
+        "ticker": simulation.get("ticker"),
+        "bullish_probability": round(float((simulation.get("probabilities") or {}).get("bullish", 0)) * 100, 2),
+        "bearish_probability": round(float((simulation.get("probabilities") or {}).get("bearish", 0)) * 100, 2),
+        "sideways_probability": round(float((simulation.get("probabilities") or {}).get("sideways", 0)) * 100, 2),
+        "dominant_scenario": simulation.get("dominant_scenario"),
+        "confidence": simulation.get("confidence"),
+        "risk_score": simulation.get("risk_score"),
+        "quality_label": bot.get("quality_label") or simulation.get("quality_label"),
+        "coverage_level": bot.get("coverage_level") or simulation.get("coverage_level"),
+        "action": bot.get("action"),
+        "failed_gates": bot.get("failed_gates", []),
+        "trade_plan": bot.get("trade_plan"),
+        "disclaimer": simulation.get("disclaimer") or TOOL_DISCLAIMER,
+    }
+
+
+def _compact_similarity(payload: dict) -> dict:
+    bullish = payload.get("bullish_outcome_pct")
+    bearish = payload.get("bearish_outcome_pct")
+    historical_win_rate = None
+    if bullish is not None or bearish is not None:
+        historical_win_rate = round(max(float(bullish or 0), float(bearish or 0)) * 100, 2)
+    score = payload.get("similarity_score")
+    return {
+        "ticker": payload.get("ticker"),
+        "similarity_score": round(float(score) * 100, 2) if score is not None else None,
+        "historical_win_rate": historical_win_rate,
+        "average_return": payload.get("average_future_return_pct"),
+        "bullish_outcome_pct": round(float(bullish or 0) * 100, 2) if bullish is not None else None,
+        "bearish_outcome_pct": round(float(bearish or 0) * 100, 2) if bearish is not None else None,
+        "sideways_outcome_pct": round(float(payload.get("sideways_outcome_pct") or 0) * 100, 2) if payload.get("sideways_outcome_pct") is not None else None,
+        "best_case_pct": payload.get("best_case_pct"),
+        "worst_case_pct": payload.get("worst_case_pct"),
+        "average_drawdown_pct": payload.get("average_drawdown_pct"),
+        "disclaimer": payload.get("disclaimer") or TOOL_DISCLAIMER,
+    }
+
+
+def _execute_marketvision_tool(tool_name: str, args: dict) -> dict:
     ticker = str(args.get("ticker", "AAPL")).upper()
     period = str(args.get("period", "1y"))
     interval = str(args.get("interval", "1d"))
@@ -165,16 +209,18 @@ def call_marketvision_tool(tool_name: str, request: ToolCallRequest) -> dict:
         return {"tool": tool_name, "result": {"ticker": ticker, "period": period, "interval": interval, "candles": normalize_history(history, limit=int(args.get("limit", 120)))}}
     if tool_name == "calculate_indicators":
         return {"tool": tool_name, "result": market_service.build_stock_analysis(ticker=ticker, period=period, interval=interval)}
-    if tool_name == "predict_market_scenario":
-        return {"tool": tool_name, "result": advanced_engine.build_simulation_response(ticker=ticker, period=period, interval=interval, horizon_steps=horizon_steps)}
+    if tool_name in {"predict_market", "predict_market_scenario"}:
+        simulation = advanced_engine.build_simulation_response(ticker=ticker, period=period, interval=interval, horizon_steps=horizon_steps)
+        return {"tool": tool_name, "result": _compact_prediction(simulation) if tool_name == "predict_market" else simulation}
     if tool_name == "run_scanner":
-        return {"tool": tool_name, "result": scan_signal_bot(tickers=str(args.get("tickers", ticker)), period=period, interval=interval, horizon_steps=horizon_steps)}
-    if tool_name == "run_historical_similarity":
-        return {"tool": tool_name, "result": bot_historical_similarity(ticker=ticker, horizon_steps=horizon_steps)}
+        return {"tool": tool_name, "result": scan_signal_bot(tickers=str(args.get("tickers") or ticker), universe=str(args.get("universe", "custom")), period=period, interval=interval, horizon_steps=horizon_steps, max_symbols=int(args.get("max_symbols", 25)))}
+    if tool_name in {"run_similarity", "run_historical_similarity"}:
+        payload = bot_historical_similarity(ticker=ticker, horizon_steps=horizon_steps)
+        return {"tool": tool_name, "result": _compact_similarity(payload) if tool_name == "run_similarity" else payload}
     if tool_name == "run_monte_carlo":
         simulation = advanced_engine.build_simulation_response(ticker=ticker, period=period, interval=interval, horizon_steps=horizon_steps)
         return {"tool": tool_name, "result": simulation.get("monte_carlo_chart")}
-    if tool_name == "get_performance_metrics":
+    if tool_name in {"get_performance", "get_performance_metrics"}:
         return {"tool": tool_name, "result": bot_performance()}
     if tool_name == "explain_prediction":
         simulation = advanced_engine.build_simulation_response(ticker=ticker, period=period, interval=interval, horizon_steps=horizon_steps)
@@ -182,8 +228,39 @@ def call_marketvision_tool(tool_name: str, request: ToolCallRequest) -> dict:
     if tool_name == "analyze_portfolio":
         holdings = args.get("holdings") or [{"ticker": ticker, "shares": float(args.get("shares", 1))}]
         return {"tool": tool_name, "result": portfolio_service.analyze_portfolio(holdings=holdings, period=period)}
+    if tool_name == "get_macro_regime":
+        return {"tool": tool_name, "result": macro_snapshot()}
+    if tool_name == "get_sentiment":
+        return {"tool": tool_name, "result": stock_news_extended(ticker=ticker, limit=int(args.get("limit", 10)))}
+    if tool_name == "get_trade_candidates":
+        scan = scan_signal_bot(
+            tickers=str(args.get("tickers") or ticker),
+            universe=str(args.get("universe", "mega_cap_ai")),
+            period=period,
+            interval=interval,
+            horizon_steps=horizon_steps,
+            max_symbols=int(args.get("max_symbols", args.get("limit", 5))),
+        )
+        limit = int(args.get("limit", 5))
+        candidates = (scan.get("passed") or scan.get("results") or [])[:limit]
+        return {"tool": tool_name, "result": {"top_candidates": candidates, "quality_buckets": scan.get("quality_buckets", {}), "disclaimer": scan.get("disclaimer")}}
 
     raise HTTPException(status_code=404, detail=f"Unknown MarketVision tool: {tool_name}")
+
+
+@app.post("/api/agents/trade-candidates")
+def agent_trade_candidates(request: AgentReportRequest, authorization: str | None = Header(default=None)) -> dict:
+    _require_tool_auth(authorization)
+    return build_trade_candidate_report(
+        prompt=request.prompt,
+        universe=request.universe,
+        tickers=request.tickers,
+        period=request.period,
+        interval=request.interval,
+        horizon_steps=request.horizon_steps,
+        max_candidates=request.max_candidates,
+        call_tool=_execute_marketvision_tool,
+    )
 
 
 @app.get("/api/market/overview")
@@ -271,10 +348,11 @@ def scan_signal_bot(
     period: str = Query(default="5d"),
     interval: str = Query(default="1d"),
     horizon_steps: int = Query(default=12, ge=4, le=60),
+    max_symbols: int = Query(default=25, ge=1, le=25),
 ) -> dict:
     if universe != "custom":
         tickers = SCAN_UNIVERSES.get(universe, tickers)
-    cache_key = f"{universe}|{tickers}|{period}|{interval}|{horizon_steps}"
+    cache_key = f"{universe}|{tickers}|{period}|{interval}|{horizon_steps}|{max_symbols}"
     cached = _SCAN_CACHE.get(cache_key)
     now = time.time()
     if cached and now - cached[0] <= _SCAN_CACHE_TTL_SECONDS:
@@ -282,7 +360,7 @@ def scan_signal_bot(
 
     symbols = [symbol.strip().upper() for symbol in tickers.split(",") if symbol.strip()]
     results = []
-    for symbol in symbols[:25]:
+    for symbol in symbols[:max_symbols]:
         try:
             simulation = advanced_engine.build_simulation_response(
                 ticker=symbol,

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+import time
 from pathlib import Path
 from typing import Any
 
@@ -14,7 +15,9 @@ log = logging.getLogger(__name__)
 
 _API_KEY = os.getenv("FRED_API_KEY", "")
 _BASE = "https://api.stlouisfed.org/fred"
-_TIMEOUT = 10
+_TIMEOUT = 4
+_CACHE_TTL_SECONDS = 900
+_SERIES_CACHE: dict[tuple[str, int], tuple[float, list[dict] | None]] = {}
 
 # Series IDs for key macro indicators
 _SERIES = {
@@ -34,6 +37,11 @@ _SERIES = {
 def _get_series(series_id: str, limit: int = 2) -> list[dict] | None:
     if not _API_KEY:
         return None
+    cache_key = (series_id, limit)
+    cached = _SERIES_CACHE.get(cache_key)
+    now = time.time()
+    if cached and now - cached[0] <= _CACHE_TTL_SECONDS:
+        return cached[1]
     try:
         r = requests.get(
             f"{_BASE}/series/observations",
@@ -49,9 +57,12 @@ def _get_series(series_id: str, limit: int = 2) -> list[dict] | None:
         r.raise_for_status()
         data = r.json()
         obs = data.get("observations", [])
-        return [o for o in obs if o.get("value") != "."]
+        result = [o for o in obs if o.get("value") != "."]
+        _SERIES_CACHE[cache_key] = (now, result)
+        return result
     except Exception as exc:
         log.warning("FRED %s failed: %s", series_id, exc)
+        _SERIES_CACHE[cache_key] = (now, None)
         return None
 
 

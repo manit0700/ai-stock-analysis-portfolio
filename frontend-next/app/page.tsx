@@ -8,10 +8,11 @@ import {
   fetchHealth, fetchMacroConditions, fetchMarketNewsItems, fetchMarketOverview,
   fetchPrediction, fetchSimilarity, fetchStockAnalysis, fetchStockNews,
   fetchStockOverview, fetchWatchlist, runBacktest, scanBotSignals, fetchBotPerformance, resolveBotOutcomes,
+  runAgentTradeCandidates,
 } from "@/lib/api";
 import { fallbackSimulation, marketCards as mockMarketCards, newsItems as mockNewsItems } from "@/lib/mock-data";
 import type {
-  BacktestResult, CompareLeader, CompareResult, MacroConditions, MarketCard,
+  AgentReportResponse, BacktestResult, CompareLeader, CompareResult, MacroConditions, MarketCard,
   NewsItem, PortfolioAnalysis, SimulationResponse, SimilarityResult,
   StockAnalysis, StockOverview, WatchlistItem, BotScanResponse, BotPerformanceResponse,
 } from "@/lib/types";
@@ -890,12 +891,15 @@ function PortfolioTab({
 // ── COPILOT TAB ───────────────────────────────────────────────────────
 function CopilotTab({
   copilotHistory, copilotInput, setCopilotInput, sendCopilot, copilotLoading,
-  stockAnalysis,
+  stockAnalysis, runAgentReport, agentReport, agentLoading,
 }: {
   copilotHistory: { role: string; content: string }[];
   copilotInput: string; setCopilotInput: (v: string) => void;
   sendCopilot: () => void; copilotLoading: boolean;
   stockAnalysis: StockAnalysis | null;
+  runAgentReport: () => void;
+  agentReport: AgentReportResponse | null;
+  agentLoading: boolean;
 }) {
   const bottomRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -913,6 +917,7 @@ function CopilotTab({
               <br />
               <span className="bb-dim">Example queries:</span><br />
               <span className="bb-dim">· Explain the NVDA simulation result</span><br />
+              <span className="bb-dim">· Find the best setups today</span><br />
               <span className="bb-dim">· What does an inverted yield curve mean?</span><br />
               <span className="bb-dim">· Is AAPL overvalued based on current signals?</span>
             </div>
@@ -940,10 +945,46 @@ function CopilotTab({
             placeholder="Enter query..."
           />
           <button onClick={sendCopilot} disabled={copilotLoading || !copilotInput.trim()} className="bb-btn text-[10px]">SEND</button>
+          <button onClick={runAgentReport} disabled={agentLoading} className="bb-btn text-[10px]">RUN AGENTS</button>
         </div>
       </Panel>
 
       <Panel title="── CONTEXT ─────────────────────────────────────────────────────" innerClass="p-3">
+        <button onClick={runAgentReport} disabled={agentLoading} className="bb-btn w-full text-[10px] mb-3">
+          {agentLoading ? "AGENTS RUNNING" : "FIND BEST SETUPS"}
+        </button>
+        {agentReport && (
+          <div className="mb-4 border border-[#ff8c0020] bg-[#0a0a0a] p-2">
+            <div className="text-[9px] bb-amber uppercase tracking-widest mb-2">Agent Tool Trace</div>
+            <p className="text-[10px] bb-white leading-4 mb-2">{agentReport.summary}</p>
+            <div className="space-y-1">
+              {agentReport.tool_trace.slice(0, 6).map((tool) => (
+                <div key={tool.tool} className="flex justify-between gap-2 text-[9px] t-row py-1">
+                  <span className="bb-amber">{tool.tool}</span>
+                  <span className="bb-dim text-right">{tool.purpose}</span>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 pt-2 border-t border-[#ff8c0015]">
+              <div className="text-[9px] bb-dim uppercase tracking-widest mb-2">Judge Candidates</div>
+              {agentReport.top_candidates.slice(0, 4).map((row) => (
+                <div key={row.ticker} className="mb-2 border border-[#ffffff08] p-2">
+                  <div className="flex justify-between text-[11px]">
+                    <span className="bb-amber font-bold">{row.ticker}</span>
+                    <span className={row.judge?.decision === "promote_candidate" ? "bb-green" : row.judge?.decision === "avoid_high_risk" ? "bb-red" : "bb-white"}>
+                      {row.judge?.decision ?? row.quality_label}
+                    </span>
+                  </div>
+                  <div className="mt-1 grid grid-cols-3 gap-1 text-[9px]">
+                    <span className="bb-dim">CONF <b className="bb-white">{num(row.confidence, 1)}</b></span>
+                    <span className="bb-dim">RISK <b className="bb-white">{num(row.risk_score, 0)}</b></span>
+                    <span className="bb-dim">SCORE <b className="bb-white">{num(row.judge?.final_confidence_score, 1)}</b></span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         <p className="text-[10px] bb-dim mb-3">Auto-injected from RESEARCH tab:</p>
         {stockAnalysis ? (
           <div className="space-y-1.5 text-[11px]">
@@ -1656,6 +1697,8 @@ export default function Home() {
   const [copilotHistory, setCopilotHistory] = useState<{ role: string; content: string }[]>([]);
   const [copilotInput, setCopilotInput] = useState("");
   const [copilotLoading, setCopilotLoading] = useState(false);
+  const [agentReport, setAgentReport] = useState<AgentReportResponse | null>(null);
+  const [agentLoading, setAgentLoading] = useState(false);
 
   // ── Portfolio state ─────────────────────────────────────────────
   const [portfolioRows, setPortfolioRows] = useState([
@@ -1780,6 +1823,33 @@ export default function Home() {
       setCopilotHistory((h) => [...h, { role: "ai", content: "[ERROR] Copilot unavailable — check OpenAI API key." }]);
     } finally {
       setCopilotLoading(false);
+    }
+  }
+
+  async function runAgentReport() {
+    if (agentLoading) return;
+    setAgentLoading(true);
+    try {
+      const prompt = copilotInput.trim() || "Find today's best trade candidates";
+      const report = await runAgentTradeCandidates({
+        prompt,
+        universe: "mega_cap_ai",
+        period: "5d",
+        interval: "1d",
+        horizon_steps: 12,
+        max_candidates: 5,
+      });
+      setAgentReport(report);
+      setCopilotHistory((h) => [
+        ...h,
+        { role: "user", content: prompt },
+        { role: "ai", content: `[AGENT REPORT] ${report.summary}` },
+      ]);
+      setCopilotInput("");
+    } catch (err) {
+      setCopilotHistory((h) => [...h, { role: "ai", content: `[ERROR] Agent ecosystem unavailable — ${err instanceof Error ? err.message : "check backend"}.` }]);
+    } finally {
+      setAgentLoading(false);
     }
   }
 
@@ -2056,6 +2126,7 @@ export default function Home() {
             copilotHistory={copilotHistory} copilotInput={copilotInput}
             setCopilotInput={setCopilotInput} sendCopilot={sendCopilot}
             copilotLoading={copilotLoading} stockAnalysis={stockAnalysis}
+            runAgentReport={runAgentReport} agentReport={agentReport} agentLoading={agentLoading}
           />
         )}
         {tab === "macro" && <MacroTab macroCond={macroCond} />}

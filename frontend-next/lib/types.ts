@@ -53,6 +53,42 @@ export type CopilotChatResponse = {
   model: string;
 };
 
+export type AgentReportResponse = {
+  version: string;
+  prompt: string;
+  universe: string;
+  period: string;
+  interval: string;
+  horizon_steps: number;
+  summary: string;
+  top_candidates: Array<{
+    ticker: string;
+    quality_label?: string;
+    action?: string;
+    confidence?: number;
+    risk_score?: number;
+    final_signal_probability?: number | null;
+    risk_reward_ratio?: number | null;
+    historical_similarity_strength?: number | null;
+    failed_gates?: string[];
+    judge?: {
+      decision: string;
+      final_confidence_score: number;
+      final_risk_score: number;
+      trade_quality?: string;
+      macro_regime?: string;
+      failed_gates?: string[];
+      reason?: string;
+    };
+    explanation?: string;
+  }>;
+  agent_runs: Array<Record<string, unknown>>;
+  tool_trace: Array<{ tool: string; purpose: string }>;
+  performance_snapshot?: Record<string, unknown>;
+  macro_snapshot?: Record<string, unknown>;
+  disclaimer: string;
+};
+
 export type PortfolioHolding = {
   ticker: string;
   shares: number;

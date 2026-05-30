@@ -185,12 +185,85 @@ def test_marketvision_tool_layer_lists_and_calls(monkeypatch) -> None:
     response = client.get("/api/tools")
     assert response.status_code == 200
     names = {tool["name"] for tool in response.json()["tools"]}
+    assert "predict_market" in names
+    assert "run_similarity" in names
+    assert "get_trade_candidates" in names
     assert "predict_market_scenario" in names
     assert "analyze_portfolio" in names
 
     monkeypatch.setattr(main_module, "bot_performance", lambda: {"total_predictions": 3})
-    call = client.post("/api/tools/get_performance_metrics", json={"arguments": {}})
+    call = client.post("/api/tools/get_performance", json={"arguments": {}})
 
     assert call.status_code == 200
-    assert call.json()["tool"] == "get_performance_metrics"
+    assert call.json()["tool"] == "get_performance"
     assert call.json()["result"]["total_predictions"] == 3
+
+
+def test_predict_market_tool_returns_compact_agent_shape(monkeypatch) -> None:
+    def fake_simulation(ticker: str, period: str = "1y", interval: str = "1d", horizon_steps: int = 12):
+        return {
+            "ticker": ticker.upper(),
+            "probabilities": {"bullish": 0.64, "bearish": 0.21, "sideways": 0.15},
+            "dominant_scenario": "bullish",
+            "confidence": 82,
+            "risk_score": 41,
+            "quality_label": "high_confidence_trade_candidate",
+            "coverage_level": "promoted_signal",
+            "ai_signal_bot": {
+                "quality_label": "high_confidence_trade_candidate",
+                "coverage_level": "promoted_signal",
+                "action": "paper_trade_candidate",
+                "failed_gates": [],
+                "trade_plan": {"entry_price": 100},
+            },
+            "disclaimer": "Probability-based market simulations and AI-generated financial intelligence, not financial advice.",
+        }
+
+    monkeypatch.setattr(main_module.advanced_engine, "build_simulation_response", fake_simulation)
+
+    response = client.post("/api/tools/predict_market", json={"arguments": {"ticker": "nvda"}})
+
+    assert response.status_code == 200
+    payload = response.json()["result"]
+    assert payload["ticker"] == "NVDA"
+    assert payload["bullish_probability"] == 64.0
+    assert payload["quality_label"] == "high_confidence_trade_candidate"
+
+
+def test_agent_trade_candidates_endpoint_uses_tool_orchestrator(monkeypatch) -> None:
+    def fake_execute(tool_name: str, args: dict):
+        if tool_name == "run_scanner":
+            return {"tool": tool_name, "result": {"results": [{
+                "ticker": "NVDA",
+                "quality_label": "watchlist_candidate",
+                "action": "watch",
+                "confidence": 70,
+                "risk_score": 45,
+                "final_signal_probability": 0.62,
+                "risk_reward_ratio": 1.8,
+                "historical_similarity_strength": 0.7,
+                "failed_gates": [],
+                "all_gates_passed": False,
+            }]}}
+        if tool_name == "get_macro_regime":
+            return {"tool": tool_name, "result": {"macro_regime_label": "mixed_macro"}}
+        if tool_name == "get_performance":
+            return {"tool": tool_name, "result": {"total_predictions": 10, "resolved_signals": 4, "drift_monitoring": {"warnings": []}}}
+        if tool_name == "run_similarity":
+            return {"tool": tool_name, "result": {"ticker": "NVDA", "similarity_score": 70, "average_future_return_pct": 1.2, "bullish_outcome_pct": 60}}
+        if tool_name == "predict_market":
+            return {"tool": tool_name, "result": {"ticker": "NVDA", "dominant_scenario": "bullish", "confidence": 70, "risk_score": 45}}
+        if tool_name == "explain_prediction":
+            return {"tool": tool_name, "result": {"explanation": "NVDA is a watchlist setup. This is a probability-based simulation, not financial advice."}}
+        raise AssertionError(tool_name)
+
+    monkeypatch.setattr(main_module, "_execute_marketvision_tool", fake_execute)
+
+    response = client.post("/api/agents/trade-candidates", json={"prompt": "Find setups", "universe": "mega_cap_ai", "max_candidates": 1})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["version"] == "v13.1"
+    assert payload["top_candidates"][0]["ticker"] == "NVDA"
+    assert payload["agent_runs"][-1]["agent"] == "judge_agent"
+    assert "probability-based" in payload["disclaimer"].lower()

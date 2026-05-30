@@ -282,13 +282,95 @@ Available tools:
 - `get_live_quote`
 - `get_candles`
 - `calculate_indicators`
+- `predict_market`
 - `predict_market_scenario`
 - `run_scanner`
+- `run_similarity`
 - `run_historical_similarity`
 - `run_monte_carlo`
+- `get_performance`
 - `get_performance_metrics`
 - `explain_prediction`
 - `analyze_portfolio`
+- `get_macro_regime`
+- `get_sentiment`
+- `get_trade_candidates`
+
+If `MARKETVISION_TOOL_TOKEN` is set, `/api/tools` and `/api/agents/*` require `Authorization: Bearer <token>`.
+
+## V13.1 MCP Server + Agent Ecosystem
+
+MarketVision now includes a stdio MCP server at `backend/mcp_server.py`. It exposes MarketVision as an AI-agent tool provider for Claude, Cursor, OpenAI Agents, LangGraph, CrewAI, or any MCP-compatible client.
+
+Run the backend first:
+
+```bash
+cd backend
+uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
+Run the MCP server:
+
+```bash
+cd backend
+MARKETVISION_API_BASE_URL=http://127.0.0.1:8000 python mcp_server.py
+```
+
+Optional auth:
+
+```bash
+export MARKETVISION_TOOL_TOKEN=your-local-tool-token
+export MARKETVISION_API_TOKEN=your-local-tool-token
+```
+
+Example MCP client config:
+
+```json
+{
+  "mcpServers": {
+    "marketvision-ai": {
+      "command": "python",
+      "args": ["/absolute/path/to/backend/mcp_server.py"],
+      "env": {
+        "MARKETVISION_API_BASE_URL": "http://127.0.0.1:8000",
+        "MARKETVISION_API_TOKEN": ""
+      }
+    }
+  }
+}
+```
+
+Core MCP tools for agents:
+
+- `predict_market`: compact probabilities, confidence, risk, quality label, and trade plan
+- `run_scanner`: ranked scanner over custom or predefined universes
+- `run_similarity`: compact historical similarity score and outcome probabilities
+- `run_monte_carlo`: chart-ready future path arrays and confidence bands
+- `analyze_portfolio`: portfolio value, exposure, correlation, and risk intelligence
+- `explain_prediction`: fact-grounded explanation text
+- `get_performance`: signal ledger, calibration, and drift metrics
+- `get_macro_regime`: FRED-backed macro regime scores
+- `get_sentiment`: recent news sentiment for a ticker
+- `get_trade_candidates`: top ranked/promoted trade candidates
+
+The backend also exposes an agent orchestration endpoint:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/agents/trade-candidates \
+  -H "Content-Type: application/json" \
+  -d '{"prompt":"Find today'\''s best trade candidates","universe":"mega_cap_ai","max_candidates":5}'
+```
+
+The agent flow runs:
+
+- Technical Agent: prediction, RSI/MACD/VWAP/trend/volume context
+- Sentiment Agent: news sentiment and macro compatibility flags
+- Macro Agent: FRED-backed macro regime
+- Risk Agent: risk score, failed gates, risk/reward
+- Simulation Agent: historical similarity and Monte Carlo context
+- Judge Agent: final candidate decision and quality score
+
+Frontend Copilot includes a “RUN AGENTS” / “FIND BEST SETUPS” action that calls the same orchestration endpoint and shows the tool trace plus Judge Agent candidate scores.
 
 ## Product Direction
 
@@ -358,7 +440,7 @@ Still missing or partial:
 - full social sentiment from Reddit/X
 - advanced sequence models in production serving
 - live brokerage execution
-- full MCP protocol server package; current implementation is a structured JSON tool layer
+- hosted production MCP gateway; current MCP server is a local stdio server backed by the FastAPI API
 
 All outputs must be framed as: “Probability-based market simulations and AI-generated financial intelligence, not financial advice.”
 
