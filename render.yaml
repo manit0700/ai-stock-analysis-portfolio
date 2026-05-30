@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: marketvision-ai-backend
+    env: python
+    plan: free
+    region: oregon
+    buildCommand: pip install --upgrade pip && pip install -r backend/requirements-render.txt
+    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: MARKETVISION_ENABLE_FINBERT
+        value: "0"
+      - key: MARKETVISION_TOOL_TOKEN
+        sync: false
+      - key: FINNHUB_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: FRED_API_KEY
+        sync: false
+      - key: NEWSAPI_KEY
+        sync: false

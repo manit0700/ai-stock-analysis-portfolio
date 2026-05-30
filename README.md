@@ -372,6 +372,47 @@ The agent flow runs:
 
 Frontend Copilot includes a “RUN AGENTS” / “FIND BEST SETUPS” action that calls the same orchestration endpoint and shows the tool trace plus Judge Agent candidate scores.
 
+## Render Backend Deployment
+
+The production-friendly sharing setup is:
+
+```text
+Vercel frontend -> Render FastAPI backend -> MarketVision V12 model/services
+```
+
+This repo includes `render.yaml` for a Render Blueprint deployment. It uses `backend/requirements-render.txt`, which intentionally excludes `torch` and `transformers` so the free Render build can run the backend and V12 model without pulling the heavy FinBERT stack. Sentiment still works through the existing VADER fallback, and FinBERT can be re-enabled later on a larger paid instance by using `backend/requirements.txt` and setting `MARKETVISION_ENABLE_FINBERT=1`.
+
+Deploy backend on Render:
+
+1. Push this repo to GitHub.
+2. In Render, choose **New +** -> **Blueprint**.
+3. Select `manit0700/ai-stock-analysis-portfolio`.
+4. Render should detect `render.yaml`.
+5. Add any API keys you have:
+   - `FINNHUB_API_KEY`
+   - `OPENAI_API_KEY`
+   - `FRED_API_KEY`
+   - `NEWSAPI_KEY`
+   - optional `MARKETVISION_TOOL_TOKEN`
+6. Deploy the `marketvision-ai-backend` service.
+7. Confirm the backend is live:
+
+```bash
+curl https://YOUR-RENDER-SERVICE.onrender.com/health
+```
+
+Then point Vercel at the Render backend:
+
+```bash
+cd frontend-next
+vercel env rm NEXT_PUBLIC_API_BASE_URL production
+vercel env add NEXT_PUBLIC_API_BASE_URL production
+# paste: https://YOUR-RENDER-SERVICE.onrender.com
+vercel --prod
+```
+
+If `MARKETVISION_TOOL_TOKEN` is set on Render, also configure the same token wherever an AI agent or MCP client calls `/api/tools` or `/api/agents/*`.
+
 ## Product Direction
 
 The real-world version of this project should stay focused on decision support:

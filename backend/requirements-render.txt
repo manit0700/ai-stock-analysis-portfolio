@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+pandas
+numpy
+yfinance
+python-dotenv
+httpx
+joblib
+scikit-learn
+xgboost
+lightgbm
+catboost
+requests
+vaderSentiment
+openai
