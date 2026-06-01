@@ -40,6 +40,49 @@ function alignToInterval(unixTs: number, intervalSeconds: number): number {
   return Math.floor(unixTs / intervalSeconds) * intervalSeconds;
 }
 
+type LinePoint = { time: Time; value: number };
+type CandlePoint = { time: Time; open: number; high: number; low: number; close: number };
+
+function toUnixTime(value: string | number | undefined, fallback: number): number {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Math.floor(new Date(value).getTime() / 1000);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return fallback;
+}
+
+function cleanLineData(points: Array<{ time: Time | number; value: number }>): LinePoint[] {
+  const byTime = new Map<number, LinePoint>();
+  for (const point of points) {
+    const time = Number(point.time);
+    const value = Number(point.value);
+    if (!Number.isFinite(time) || !Number.isFinite(value)) continue;
+    byTime.set(time, { time: time as Time, value });
+  }
+  return [...byTime.values()].sort((a, b) => Number(a.time) - Number(b.time));
+}
+
+function cleanCandleData(points: Array<{ time: Time | number; open: number; high: number; low: number; close: number }>): CandlePoint[] {
+  const byTime = new Map<number, CandlePoint>();
+  for (const point of points) {
+    const time = Number(point.time);
+    const open = Number(point.open);
+    const high = Number(point.high);
+    const low = Number(point.low);
+    const close = Number(point.close);
+    if (![time, open, high, low, close].every(Number.isFinite)) continue;
+    byTime.set(time, {
+      time: time as Time,
+      open,
+      high: Math.max(high, open, close),
+      low: Math.min(low, open, close),
+      close,
+    });
+  }
+  return [...byTime.values()].sort((a, b) => Number(a.time) - Number(b.time));
+}
+
 export default function SimulationChart({ simulation }: { simulation: SimulationResponse }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<ReturnType<typeof createChart> | null>(null);
@@ -56,6 +99,8 @@ export default function SimulationChart({ simulation }: { simulation: Simulation
     candles: true,
     scenarios: true,
     band: true,
+    cone: true,
+    cloud: true,
     stress: false,
     ml: true,
   });
@@ -196,10 +241,11 @@ export default function SimulationChart({ simulation }: { simulation: Simulation
     });
 
     // Historical candles
-    const candles = simulation.recent_history.map((p) => ({
+    const candles = cleanCandleData(simulation.recent_history.map((p) => ({
       time: Math.floor(new Date(p.date).getTime() / 1000) as Time,
       open: p.open, high: p.high, low: p.low, close: p.close,
-    }));
+    })));
+    if (!candles.length) return;
 
     const candleSeries = chart.addSeries(CandlestickSeries, {
       upColor: "#00cc55",
@@ -213,8 +259,8 @@ export default function SimulationChart({ simulation }: { simulation: Simulation
     });
     candleSeries.setData(candles);
     candleSeriesRef.current = candleSeries;
-    candleDataRef.current = simulation.recent_history.map((p) => ({
-      time: Math.floor(new Date(p.date).getTime() / 1000),
+    candleDataRef.current = candles.map((p) => ({
+      time: Number(p.time),
       open: p.open, high: p.high, low: p.low, close: p.close,
     }));
 
@@ -233,10 +279,28 @@ export default function SimulationChart({ simulation }: { simulation: Simulation
     }
 
     function withAnchor(prices: number[]) {
-      return [
+      return cleanLineData([
         { time: lastTs as Time, value: anchorPrice },
         ...prices.slice(0, horizon).map((v, i) => ({ time: futureTimes[i], value: v })),
-      ];
+      ]);
+    }
+
+    function chartPoints(points?: { time: string | number; value: number }[]) {
+      if (!points?.length) return [];
+      let previous = lastTs;
+      const projected = points.slice(0, horizon).map((point, i) => {
+        const rawTime = toUnixTime(point.time, Number(futureTimes[i]));
+        const time = rawTime <= previous ? previous + intervalSeconds : rawTime;
+        previous = time;
+        return {
+          time: time as Time,
+          value: point.value,
+        };
+      });
+      return cleanLineData([
+        { time: lastTs as Time, value: anchorPrice },
+        ...projected,
+      ]);
     }
 
     function buildProjectedCandles() {
@@ -255,12 +319,18 @@ export default function SimulationChart({ simulation }: { simulation: Simulation
               close,
             };
           });
-      return (source ?? []).slice(0, horizon).map((c, i) => ({
-        time: (c.date ? Math.floor(new Date(c.date).getTime() / 1000) : futureTimes[i]) as Time,
-        open: c.open,
-        high: c.high,
-        low: c.low,
-        close: c.close,
+      let previous = lastTs;
+      return cleanCandleData((source ?? []).slice(0, horizon).map((c, i) => {
+        const rawTime = toUnixTime(c.date, Number(futureTimes[i]));
+        const time = rawTime <= previous ? previous + intervalSeconds : rawTime;
+        previous = time;
+        return {
+          time: time as Time,
+          open: c.open,
+          high: c.high,
+          low: c.low,
+          close: c.close,
+        };
       }));
     }
 
@@ -287,6 +357,30 @@ export default function SimulationChart({ simulation }: { simulation: Simulation
         crosshairMarkerVisible: false,
       });
       lower.setData(withAnchor(simulation.confidence_band.lower));
+    }
+
+    if (layers.cone && simulation.monte_carlo_chart?.volatility_cone_p95?.length && simulation.monte_carlo_chart?.volatility_cone_p05?.length) {
+      const upperCone = chart.addSeries(AreaSeries, {
+        topColor: "rgba(0,204,255,0.08)",
+        bottomColor: "rgba(0,204,255,0.01)",
+        lineColor: "rgba(0,204,255,0.22)",
+        lineWidth: 1,
+        priceLineVisible: false,
+        lastValueVisible: false,
+        crosshairMarkerVisible: false,
+        title: "VOL CONE",
+      });
+      upperCone.setData(chartPoints(simulation.monte_carlo_chart.volatility_cone_p95));
+
+      const lowerCone = chart.addSeries(LineSeries, {
+        color: "rgba(0,204,255,0.18)",
+        lineWidth: 1,
+        lineStyle: 2,
+        priceLineVisible: false,
+        lastValueVisible: false,
+        crosshairMarkerVisible: false,
+      });
+      lowerCone.setData(chartPoints(simulation.monte_carlo_chart.volatility_cone_p05));
     }
 
     // Scenario paths
@@ -317,6 +411,15 @@ export default function SimulationChart({ simulation }: { simulation: Simulation
         crosshairMarkerRadius: 5, crosshairMarkerBackgroundColor: "#ff8c00",
       });
       s.setData(withAnchor(paths.sideways));
+    }
+
+    if (layers.cloud && simulation.monte_carlo_chart?.main_predicted_path?.length) {
+      const s = chart.addSeries(LineSeries, {
+        color: "rgba(0,204,255,0.55)", lineWidth: 2, lineStyle: 3,
+        priceLineVisible: false, lastValueVisible: false, title: "PROB CLOUD",
+        crosshairMarkerVisible: false,
+      });
+      s.setData(chartPoints(simulation.monte_carlo_chart.main_predicted_path));
     }
 
     if (layers.stress && paths?.high_volatility?.length) {
@@ -540,6 +643,8 @@ export default function SimulationChart({ simulation }: { simulation: Simulation
           ["candles", "CANDLES"],
           ["scenarios", "LINES"],
           ["band", "BAND"],
+          ["cone", "CONE"],
+          ["cloud", "CLOUD"],
           ["stress", "STRESS"],
           ["ml", "ML"],
         ] as const).map(([key, label]) => (
