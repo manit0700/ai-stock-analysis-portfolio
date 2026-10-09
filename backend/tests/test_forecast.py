@@ -350,7 +350,8 @@ def test_a_promoted_model_serves_through_the_same_pipeline_as_training(signal_ru
     training_row = rows.loc[[day], bundle["feature_names"]]
     expected = float(bundle["calibrator"].transform(bundle["estimator"].predict_proba(training_row)[:, 1])[0])
     assert service.predict(symbol, as_of=day.date())["probability_up"] == pytest.approx(expected, abs=1e-6)
-    assert service.predict(symbol) == {**service.predict(symbol), "issued_at": service.predict(symbol)["issued_at"]}
+    first, second = service.predict(symbol), service.predict(symbol)
+    assert first["probability_up"] == second["probability_up"] and first["data_snapshot_id"] == second["data_snapshot_id"]  # deterministic; only cache age differs
 
 
 def test_a_model_with_a_different_feature_schema_is_refused(signal_run, monkeypatch):

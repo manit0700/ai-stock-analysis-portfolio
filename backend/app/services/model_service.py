@@ -35,11 +35,13 @@ FEATURE_COLUMNS_V2 = [
 FEATURE_COLUMNS = FEATURE_COLUMNS_V2
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
-_ARTIFACTS_DIRS = [
-    _PROJECT_ROOT / "ml" / "artifacts",
-    _PROJECT_ROOT / "ml" / "kaggle_output_latest" / "artifacts",
-    _PROJECT_ROOT / "ml" / "kaggle_output_v12" / "artifacts",
-]
+# The v5-v12 artifacts are quarantined (see ml/quarantine/README.md): they fail evaluation and
+# were served with 21 of 45 inputs zero-filled. This list is empty on purpose; the blend below
+# stays for a future artifact that passes `python -m app.forecast` evaluation AND computes every
+# input at serving time. Set MARKETVISION_LEGACY_MODEL_DIR to opt back in deliberately.
+import os as _os
+
+_ARTIFACTS_DIRS = [Path(p) for p in [_os.getenv("MARKETVISION_LEGACY_MODEL_DIR", "")] if p]
 
 
 def _find_latest_model() -> Path | None:

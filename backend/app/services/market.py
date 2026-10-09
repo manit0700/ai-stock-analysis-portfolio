@@ -92,11 +92,15 @@ class MarketDataService:
         period: str = "6mo",
         interval: str = "1d",
     ) -> pd.DataFrame:
+        """Bars from the unified market-data layer: one cache, retries, rate limits and quality checks
+        for every legacy service (the old code called yfinance directly from five modules)."""
+        from app.marketdata.service import get_market_data
+
         yf_period, yf_interval, resample_4h = self._normalize_interval_request(period, interval)
-        history = yf.Ticker(ticker.upper()).history(period=yf_period, interval=yf_interval, auto_adjust=False)
+        history = get_market_data().history(ticker, period=yf_period, interval=yf_interval).data
+        history = history.dropna(subset=["Close"])
         if history.empty:
             raise HTTPException(status_code=404, detail=f"No price history found for {ticker.upper()}")
-        history = history.dropna(subset=["Close"])
         if resample_4h:
             history = history.resample("4h").agg({
                 "Open": "first",
@@ -263,34 +267,14 @@ class MarketDataService:
         }
 
     def get_news(self, ticker: str, limit: int = 5) -> list[dict[str, Any]]:
-        normalized_ticker = ticker.upper()
-        stock = yf.Ticker(normalized_ticker)
+        """Headlines through the unified layer (Finnhub, then NewsAPI, then Yahoo), deduplicated and cached."""
+        from app.core.errors import MarketVisionError
+        from app.marketdata.service import get_market_data
+
         try:
-            raw_news = stock.news or []
-        except Exception as exc:
-            raise HTTPException(status_code=502, detail=f"Unable to fetch news for {normalized_ticker}: {exc}") from exc
-
-        news_items: list[dict[str, Any]] = []
-        for item in raw_news[:limit]:
-            provider = item.get("publisher")
-            link = item.get("link") or item.get("canonicalUrl", {}).get("url")
-            published_at = item.get("providerPublishTime")
-            summary = item.get("summary")
-            if published_at:
-                published_dt = datetime.fromtimestamp(published_at, tz=timezone.utc).isoformat()
-            else:
-                published_dt = None
-            news_items.append(
-                {
-                    "title": item.get("title", ""),
-                    "publisher": provider,
-                    "link": link,
-                    "published_at": published_dt,
-                    "summary": summary,
-                }
-            )
-
-        return news_items
+            return get_market_data().news(symbol=ticker, limit=limit).data
+        except MarketVisionError as exc:
+            raise HTTPException(status_code=exc.http_status, detail=exc.message) from None
 
     def get_market_overview(self) -> dict[str, Any]:
         MARKET_SYMBOLS = {

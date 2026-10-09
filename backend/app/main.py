@@ -3,7 +3,9 @@ from __future__ import annotations
 import time
 import os
 
-from fastapi import FastAPI, Header, HTTPException, Query
+import json
+
+from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from pydantic import BaseModel
@@ -27,22 +29,44 @@ from app.services.simulation import SimulationService
 from app.services.tool_catalog import DISCLAIMER as TOOL_DISCLAIMER
 from app.services.tool_catalog import TOOL_CATALOG, list_tools
 
+from app.api.routes import router as v2_router
+from app.core.config import get_settings
+from app.core.errors import MarketVisionError
+from app.core.secrets import install_log_redaction, redact
+from app.core.security import rate_limit, require_admin, require_read
+
+install_log_redaction()
+_settings = get_settings()
+
 app = FastAPI(
-    title="AI Stock Analysis MVP",
-    version="0.1.0",
+    title="MarketVision AI",
+    version="2.0.0",
     description=(
-        "A practical stock research and portfolio risk API built for investor support. "
-        "Responses are informational and not personalized investment advice."
+        "Stock research, probability forecasts and a simulated trading account. "
+        "Responses are informational and not personalized investment advice. SIMULATED TRADING — NO REAL MONEY."
     ),
 )
 
+# Browsers from these origins only. "*" with credentials (the previous setting) lets any site
+# a logged-in user visits call this API with their cookies.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=list(_settings.cors_origins),
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Authorization", "Content-Type"],
 )
+
+
+@app.exception_handler(MarketVisionError)
+async def _domain_error(request, exc: MarketVisionError):
+    from fastapi.responses import JSONResponse
+
+    body = json.loads(redact(json.dumps(exc.to_dict(), default=str)))
+    return JSONResponse(status_code=exc.http_status, content=body)
+
+
+app.include_router(v2_router)
 
 market_service = MarketDataService()
 portfolio_service = PortfolioService()
@@ -73,10 +97,9 @@ TOOL_TOKEN = os.getenv("MARKETVISION_TOOL_TOKEN", "")
 
 
 def _require_tool_auth(authorization: str | None) -> None:
-    if not TOOL_TOKEN:
-        return
-    if authorization != f"Bearer {TOOL_TOKEN}":
-        raise HTTPException(status_code=401, detail="MarketVision tool token required")
+    from app.core.security import authorize
+
+    authorize(authorization, "read")
 
 
 def _record_bot_signal(ticker: str, simulation: dict, source: str) -> None:
@@ -341,7 +364,7 @@ def stock_signal_bot(
     }
 
 
-@app.get("/api/bot/scan")
+@app.get("/api/bot/scan", dependencies=[Depends(require_read), Depends(rate_limit("scan", 6, 60.0))])
 def scan_signal_bot(
     tickers: str = Query(default="AAPL,NVDA,MSFT,AMZN,META,GOOGL,TSLA,AVGO,AMD,CRM"),
     universe: str = Query(default="custom"),
@@ -516,7 +539,7 @@ def explain_bot_prediction(request: PredictionRequest) -> dict:
     }
 
 
-@app.post("/api/bot/resolve-outcomes")
+@app.post("/api/bot/resolve-outcomes", dependencies=[Depends(require_admin)])
 def resolve_bot_outcomes() -> dict:
     result = resolve_pending_signals(market_service=market_service)
     return {
@@ -649,7 +672,7 @@ def stock_similarity(ticker: str, top_n: int = Query(default=5, ge=1, le=10)) ->
     return find_similar_setups(ticker=ticker, top_n=top_n)
 
 
-@app.get("/api/news/search")
+@app.get("/api/news/search", dependencies=[Depends(require_read), Depends(rate_limit("news", 30))])
 def news_search(q: str = Query(..., min_length=2), limit: int = Query(default=10, ge=1, le=20)) -> dict:
     if newsapi_service.is_available():
         items = newsapi_service.search_news(query=q, limit=limit)
@@ -735,7 +758,7 @@ class CopilotChatRequest(BaseModel):
     history: list[dict] | None = None
 
 
-@app.post("/api/copilot/chat")
+@app.post("/api/copilot/chat", dependencies=[Depends(require_admin), Depends(rate_limit("copilot", 20))])
 def copilot_chat(request: CopilotChatRequest) -> dict:
     reply = copilot_service.chat(
         message=request.message,
@@ -745,7 +768,7 @@ def copilot_chat(request: CopilotChatRequest) -> dict:
     return {"reply": reply, "model": "gpt-4o-mini"}
 
 
-@app.get("/api/copilot/explain/{ticker}")
+@app.get("/api/copilot/explain/{ticker}", dependencies=[Depends(require_admin), Depends(rate_limit("copilot", 20))])
 def copilot_explain(ticker: str, period: str = Query(default="1y")) -> dict:
     simulation = simulation_service.build_prediction_simulation(ticker=ticker, period=period)
     explanation = copilot_service.explain_simulation(simulation)
@@ -764,7 +787,7 @@ def copilot_explain(ticker: str, period: str = Query(default="1y")) -> dict:
     }
 
 
-@app.get("/api/copilot/analyse/{ticker}")
+@app.get("/api/copilot/analyse/{ticker}", dependencies=[Depends(require_admin), Depends(rate_limit("copilot", 20))])
 def copilot_analyse(ticker: str, period: str = Query(default="6mo")) -> dict:
     analysis = market_service.build_stock_analysis(ticker=ticker, period=period)
     explanation = copilot_service.explain_stock_analysis(analysis)
