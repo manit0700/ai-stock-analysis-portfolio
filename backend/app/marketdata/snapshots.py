@@ -25,7 +25,7 @@ from app.core.clock import iso, utcnow
 from app.core.errors import NotFound, ProviderError, ValidationFailed
 from app.marketdata.providers.base import Provider
 
-_SAFE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._^=-]{0,40}$")
+_SAFE = re.compile(r"^[A-Za-z0-9^][A-Za-z0-9._^=-]{0,40}$")  # index symbols such as ^VIX start with a caret
 
 
 def _safe_name(name: str) -> str:

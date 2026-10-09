@@ -59,3 +59,40 @@ def bars(rows: list[tuple[float, float, float, float]], *, start: str = "2024-01
     frame = pd.DataFrame(rows, columns=["Open", "High", "Low", "Close"], index=index, dtype=float)
     frame["Volume"] = volume
     return frame
+
+
+def make_predictable_ohlcv(periods: int, *, start: str = "2015-01-02", seed: int = 0, vol: float = 0.012, strength: float = 0.6) -> pd.DataFrame:
+    """Prices with a slowly changing hidden drift, so that recent returns really do predict the next ones.
+
+    Used to check that the evaluation pipeline can recognise an effect when one exists. It is not
+    a model of any market.
+    """
+    rng = np.random.default_rng(seed)
+    index = session_index(start, periods)
+    drift = np.zeros(periods)
+    for t in range(1, periods):
+        drift[t] = 0.97 * drift[t - 1] + rng.normal(0, vol * strength * 0.25)
+    returns = drift + rng.normal(0, vol, periods)
+    close = 100.0 * np.cumprod(1 + returns)
+    open_ = np.r_[100.0, close[:-1]]
+    high = np.maximum(open_, close) * (1 + np.abs(rng.normal(0, vol / 3, periods)))
+    low = np.minimum(open_, close) * (1 - np.abs(rng.normal(0, vol / 3, periods)))
+    volume = 2_000_000.0 * np.exp(rng.normal(0, 0.25, periods))
+    return pd.DataFrame({"Open": open_, "High": high, "Low": low, "Close": close, "Volume": volume.round()}, index=index)
+
+
+def make_snapshot(directory, *, symbols: int = 6, periods: int = 1700, start: str = "2015-01-02", seed: int = 0, predictable: bool = False, strength: float = 0.6, name: str = "synthetic") -> tuple[str, list[str]]:
+    """Write a synthetic data snapshot (stocks, SPY and the VIX). Returns ``(snapshot_id, stock symbols)``."""
+    from app.marketdata.snapshots import SnapshotStore
+
+    names = [f"S{k}" for k in range(1, symbols + 1)]
+    frames = {}
+    for k, symbol in enumerate(names):
+        frames[symbol] = (make_predictable_ohlcv(periods, start=start, seed=seed + k, strength=strength) if predictable else make_ohlcv(periods, start=start, seed=seed + k))
+    frames["SPY"] = make_ohlcv(periods, start=start, seed=seed + 100, start_price=300, vol=0.009)
+    rng = np.random.default_rng(seed + 200)
+    vix = 18 + np.clip(np.cumsum(rng.normal(0, 0.35, periods)), -8, 40)
+    level = pd.Series(vix, index=frames["SPY"].index)
+    frames["^VIX"] = pd.DataFrame({"Open": level, "High": level * 1.02, "Low": level * 0.98, "Close": level, "Volume": 0.0})
+    manifest = SnapshotStore(directory).create(name, frames, description="synthetic test data", metadata={"context_only": ["SPY", "^VIX"]})
+    return manifest["id"], names

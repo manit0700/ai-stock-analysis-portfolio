@@ -77,6 +77,16 @@ def _prepare(ohlcv: pd.DataFrame, label: str) -> pd.DataFrame:
     return frame
 
 
+def adjusted_close(ohlcv: pd.DataFrame) -> pd.Series:
+    """The close series every return in this project is computed from.
+
+    Features, forecast targets and outcome scoring all call this, so "the 5-session return" means
+    the same thing in each of them: dividend- and split-adjusted when the provider supplies an
+    adjusted close, otherwise the close as given.
+    """
+    return _prepare(ohlcv, "The price history")["_close"].rename("adjusted_close")
+
+
 def _as_of(series: pd.Series, index: pd.DatetimeIndex, max_gap_sessions: int, lag_days: int = 0) -> pd.Series:
     """Latest value of ``series`` known at each date in ``index``; ``NaN`` if too old or absent."""
     values = series.dropna().sort_index()

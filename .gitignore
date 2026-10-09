@@ -52,3 +52,8 @@ backend/data/
 
 # TypeScript incremental build cache
 *.tsbuildinfo
+
+# Fitted model files and per-row predictions are rebuilt from a data snapshot by
+# `python -m app.forecast evaluate`. Model cards and the registry are kept.
+backend/models/**/model.joblib
+backend/models/**/predictions.csv.gz
