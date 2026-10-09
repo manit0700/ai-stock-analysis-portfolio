@@ -180,6 +180,24 @@ class Book:
         self.realized += realized
         return self._append(at=at, kind="sell", symbol=symbol, quantity=quantity, price=price, gross=gross, fee=fee, cash_change=proceeds, realized=realized, reference=reference, note=note)
 
+    def apply_split(self, symbol: str, ratio: Any, *, at: str = "", reference: str = "") -> Entry | None:
+        """A stock split: the share count scales by ``ratio``, the cost basis does not move.
+
+        ``ratio`` is new shares per old share (2 for a 2-for-1 split, 0.25 for a 1-for-4 reverse
+        split). No cash moves and nothing is realised, so every identity is untouched.
+        """
+        ratio = D(ratio)
+        if ratio <= 0:
+            raise ValidationFailed("A split ratio must be greater than zero.")
+        position = self.positions.get(symbol)
+        if position is None or position.quantity <= 0 or ratio == 1:
+            return None
+        position.quantity = shares(position.quantity * ratio)
+        if position.quantity <= 0:  # a reverse split of a dust position cannot round the holding away
+            position.quantity = SHARE_STEP
+        return self._append(at=at, kind="split", symbol=symbol, quantity=position.quantity, price=ratio, gross=ZERO, fee=ZERO, cash_change=ZERO, realized=ZERO, reference=reference,
+                            note=f"split {ratio}:1; cost basis unchanged")
+
     def credit_dividend(self, symbol: str, per_share: Any, *, at: str = "", reference: str = "") -> Entry | None:
         """Pay a cash dividend on shares held. Returns ``None`` when nothing is held or the amount rounds to zero."""
         per_share = D(per_share)

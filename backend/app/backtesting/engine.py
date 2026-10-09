@@ -16,8 +16,9 @@ Timing, chosen to rule out look-ahead
 What this does and does not model
     * Cash, fractional or whole shares, a fixed share of equity per position, commission, spread,
       slippage, dividends paid in cash on the ex-date, and a liquidity filter.
-    * Prices are expected split-adjusted (as Yahoo Finance supplies them), so a split needs no
-      share adjustment. One instrument at a time. Long only. No margin, no borrowing.
+    * Prices may be as traded: a ``Stock Splits`` column, when present, scales the share count on
+      the ex-date (cost basis unchanged) and rebases the open trade's entry for its stop and
+      target, so a split is not booked as a loss. One instrument at a time. Long only. No margin.
     * Fills are assumed at the open price whatever the order size; nothing here models market
       impact, partial fills, halts, or the overnight gap between a decision and its execution
       beyond using the next open.
@@ -97,6 +98,12 @@ class BacktestConfig:
             value = getattr(self, name)
             if value is not None and not (ZERO < D(value) < ONE):
                 raise ValidationFailed(f"{name} must be between 0 and 1.")
+        adverse = (D(self.costs.half_spread_bps) + D(self.costs.slippage_bps)) * BPS
+        if self.stop_loss_pct is not None and D(self.stop_loss_pct) <= 2 * adverse:
+            raise ValidationFailed(
+                f"stop_loss_pct ({float(D(self.stop_loss_pct)):.4%}) is inside the round-trip spread and slippage ({float(2 * adverse):.4%}): "
+                "entries would stop out instantly at prices the market never traded.",
+            )
 
 
 @dataclass
@@ -133,6 +140,7 @@ def run_backtest(bars: pd.DataFrame, target: pd.Series, config: BacktestConfig |
     opens, highs, lows, closes = (bars[c].to_numpy(float) for c in REQUIRED)
     volumes = bars["Volume"].to_numpy(float) if "Volume" in bars.columns else np.full(len(bars), np.nan)
     dividends = bars["Dividends"].to_numpy(float) if "Dividends" in bars.columns else np.zeros(len(bars))
+    splits = bars["Stock Splits"].to_numpy(float) if "Stock Splits" in bars.columns else np.zeros(len(bars))
     wants = np.where(np.isfinite(target.to_numpy(float)), target.to_numpy(float) > 0, False)
 
     n = len(bars)
@@ -152,7 +160,7 @@ def run_backtest(bars: pd.DataFrame, target: pd.Series, config: BacktestConfig |
         quantity = book.quantity(symbol)
         fill = config.costs.sell_price(reference)
         value = cents_down(quantity * fill)
-        fee = config.costs.fee(value)
+        fee = min(config.costs.fee(value), value)  # a forced exit must complete; the fee cannot exceed the proceeds
         entry = book.sell(symbol, quantity, fill, fee=fee, at=day.date().isoformat(), reference=reason)
         price_cost += cents_down(quantity * reference) - value
         cost = open_trade["cost"]
@@ -172,6 +180,15 @@ def run_backtest(bars: pd.DataFrame, target: pd.Series, config: BacktestConfig |
         if not tradable:
             counters["bars_without_prices"] += 1
         else:
+            # 0. a split scales the share count; the open trade's entry rebases so stops and targets follow
+            if np.isfinite(splits[i]) and splits[i] > 0 and splits[i] != 1 and book.quantity(symbol) > 0:
+                ratio = _price(splits[i])
+                book.apply_split(symbol, ratio, at=day.date().isoformat())
+                if open_trade is not None:
+                    open_trade["fill"] = price4(open_trade["fill"] / ratio)
+                    open_trade["reference"] = price4(open_trade["reference"] / ratio)
+                counters["splits_applied"] = counters.get("splits_applied", 0) + 1
+
             # 1. a dividend goes to whoever held the shares coming into the ex-date
             if np.isfinite(dividends[i]) and dividends[i] > 0 and book.quantity(symbol) > 0:
                 if book.credit_dividend(symbol, _price(dividends[i]), at=day.date().isoformat()) is not None:

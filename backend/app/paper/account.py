@@ -21,6 +21,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import threading
+from contextlib import contextmanager
 import uuid
 from dataclasses import dataclass
 from decimal import Decimal
@@ -94,15 +95,44 @@ class PaperAccountService:
         self.db_path = Path(db_path) if db_path is not None else settings.data_dir / "paper.sqlite3"
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._lock = threading.RLock()
-        with self._connect() as db:
+        db = self._connect()
+        try:
             db.executescript(_SCHEMA)
+        finally:
+            db.close()
 
     # ------------------------------------------------------------------ storage
     def _connect(self) -> sqlite3.Connection:
-        db = sqlite3.connect(self.db_path, timeout=10)
+        db = sqlite3.connect(self.db_path, timeout=10, isolation_level=None)  # explicit transactions
         db.row_factory = sqlite3.Row
         db.execute("PRAGMA foreign_keys = ON")
+        db.execute("PRAGMA busy_timeout = 10000")
         return db
+
+    @contextmanager
+    def _read(self):
+        db = self._connect()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    @contextmanager
+    def _write(self):
+        """One BEGIN IMMEDIATE transaction: the write lock is taken before any balance is read, so
+        two processes cannot both see the same cash and both spend it (the reviewer's race, which
+        also left the account unreadable afterwards)."""
+        db = self._connect()
+        try:
+            db.execute("BEGIN IMMEDIATE")
+            try:
+                yield db
+            except BaseException:
+                db.execute("ROLLBACK")
+                raise
+            db.execute("COMMIT")
+        finally:
+            db.close()
 
     def _event(self, db: sqlite3.Connection, account_id: str, kind: str, payload: dict[str, Any]) -> None:
         db.execute("INSERT INTO events (account_id, at, kind, payload) VALUES (?, ?, ?, ?)", (account_id, iso(utcnow()), kind, json.dumps(payload, default=str)))
@@ -144,7 +174,9 @@ class PaperAccountService:
             raise OrderRejected("No usable price is available, so the order is rejected.", code="no_price", details=quote)
         if state != "open" and not self.config.allow_when_market_closed:
             raise OrderRejected("The market is closed and this account only simulates fills during market hours.", code="market_closed", details=quote)
-        if age is not None and age > self.config.max_quote_age_seconds:
+        if age is None:
+            raise OrderRejected("The provider did not say how old this price is, so it is not traded on.", code="unknown_quote_age", details=quote)
+        if age > self.config.max_quote_age_seconds:
             raise OrderRejected(
                 f"The newest price is {age:.0f} seconds old (limit {self.config.max_quote_age_seconds:.0f}). Stale data is not traded on.",
                 code="stale_quote", details=quote,
@@ -167,7 +199,7 @@ class PaperAccountService:
 
     # ------------------------------------------------------------------ public reads
     def account(self) -> dict[str, Any]:
-        with self._lock, self._connect() as db:
+        with self._lock, self._read() as db:
             row = self._active_account(db)
             book = self._book(db, row)
             prices, missing = self._marks(book)
@@ -183,7 +215,7 @@ class PaperAccountService:
             }
 
     def history(self, *, limit: int = 100, include_rejected: bool = True) -> list[dict[str, Any]]:
-        with self._lock, self._connect() as db:
+        with self._lock, self._read() as db:
             row = self._active_account(db)
             query = "SELECT * FROM orders WHERE account_id = ?" + ("" if include_rejected else " AND status = 'filled'") + " ORDER BY at DESC, rowid DESC LIMIT ?"
             out = []
@@ -218,10 +250,10 @@ class PaperAccountService:
         symbol = clean_symbol(symbol)
         if (quantity is None) == (notional is None):
             raise ValidationFailed("Give exactly one of quantity (shares) or notional (dollars).")
-        request = {"side": side, "symbol": symbol, "quantity": None if quantity is None else str(D(quantity)), "notional": None if notional is None else money_str(D(notional))}
+        request = {"side": side, "symbol": symbol, "quantity": None if quantity is None else str(D(quantity).normalize()), "notional": None if notional is None else money_str(D(notional))}
         client_order_id = (client_order_id or "").strip() or f"auto-{uuid.uuid4().hex[:16]}"
 
-        with self._lock, self._connect() as db:
+        with self._lock, self._write() as db:
             account = self._active_account(db)
             existing = db.execute("SELECT * FROM orders WHERE account_id = ? AND client_order_id = ?", (account["id"], client_order_id)).fetchone()
             if existing is not None:
@@ -232,12 +264,16 @@ class PaperAccountService:
             at = iso(utcnow())
 
             def reject(exc: OrderRejected, quote: dict | None = None) -> dict[str, Any]:
+                # A rejection is recorded but does not consume the caller's client_order_id:
+                # retrying the same id after the market opens (or a cap clears) must be possible.
                 db.execute(
                     "INSERT INTO orders (id, account_id, client_order_id, at, side, symbol, request, status, reason, quote) VALUES (?, ?, ?, ?, ?, ?, ?, 'rejected', ?, ?)",
-                    (order_id, account["id"], client_order_id, at, side, symbol, json.dumps(request), f"{exc.code}: {exc.message}", json.dumps(quote, default=str) if quote else None),
+                    (order_id, account["id"], f"rejected-{order_id}", at, side, symbol, json.dumps({**request, "client_order_id": client_order_id}), f"{exc.code}: {exc.message}",
+                     json.dumps(quote, default=str) if quote else None),
                 )
                 self._event(db, account["id"], "order_rejected", {"order_id": order_id, "code": exc.code, "message": exc.message, "request": request})
-                db.commit()  # raising below would otherwise roll the rejection record back
+                db.execute("COMMIT")  # keep the rejection record; the context manager's ROLLBACK must not erase it
+                db.execute("BEGIN IMMEDIATE")
                 raise exc
 
             if bool(account["paused"]):
@@ -256,6 +292,14 @@ class PaperAccountService:
             else:
                 budget = cents(D(notional))
                 amount = shares(budget / (fill * (ONE + D(self.config.commission_rate))))
+                rate = D(self.config.commission_rate)
+                for _ in range(8):  # rounding up the cost and the fee can leave the total over the stated notional
+                    value = cents_up(amount * fill)
+                    fee_estimate = cents_up(value * rate) if rate else ZERO
+                    if amount <= 0 or value + fee_estimate <= budget:
+                        break
+                    smaller = shares((budget - fee_estimate) / fill)
+                    amount = smaller if smaller < amount else shares(amount - Decimal("0.000001"))
             if amount <= 0:
                 reject(OrderRejected("The order quantity rounds to zero shares.", code="invalid_quantity"), quote)
             value = cents_up(amount * fill) if side == "buy" else cents_down(amount * fill)
@@ -264,8 +308,13 @@ class PaperAccountService:
             fee = cents_up(value * D(self.config.commission_rate)) if self.config.commission_rate else ZERO
 
             if side == "buy":
-                prices, _ = self._marks(book)
+                prices, missing_marks = self._marks(book)
                 prices[symbol] = reference
+                if missing_marks:
+                    reject(OrderRejected(
+                        f"No live price for {', '.join(missing_marks)}, so the position and exposure caps cannot be computed. The buy is rejected, not guessed.",
+                        code="marks_unavailable", details={"missing": missing_marks},
+                    ), quote)
                 equity_now = book.cash + book.market_value(prices)
                 position_after = cents_down((book.quantity(symbol) + amount) * reference)
                 invested_after = book.market_value(prices) + cents_up(amount * reference)
@@ -304,7 +353,7 @@ class PaperAccountService:
 
     # ------------------------------------------------------------------ controls
     def set_paused(self, paused: bool, *, reason: str = "") -> dict[str, Any]:
-        with self._lock, self._connect() as db:
+        with self._lock, self._write() as db:
             account = self._active_account(db)
             db.execute("UPDATE accounts SET paused = ? WHERE id = ?", (int(bool(paused)), account["id"]))
             self._event(db, account["id"], "trading_paused" if paused else "trading_resumed", {"reason": reason})
@@ -312,7 +361,7 @@ class PaperAccountService:
 
     def reset(self, *, reason: str = "") -> dict[str, Any]:
         """Archive the active account (history kept) and open a fresh one with the starting cash."""
-        with self._lock, self._connect() as db:
+        with self._lock, self._write() as db:
             account = self._active_account(db)
             db.execute("UPDATE accounts SET status = 'archived', archived_at = ? WHERE id = ?", (iso(utcnow()), account["id"]))
             self._event(db, account["id"], "account_archived", {"reason": reason})
@@ -321,7 +370,7 @@ class PaperAccountService:
 
     def performance(self) -> dict[str, Any]:
         """Equity against starting cash, fees paid, realised and unrealised profit, win rate on closed sales."""
-        with self._lock, self._connect() as db:
+        with self._lock, self._read() as db:
             account = self._active_account(db)
             book = self._book(db, account)
             prices, missing = self._marks(book)

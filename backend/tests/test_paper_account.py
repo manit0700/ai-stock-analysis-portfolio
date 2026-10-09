@@ -214,3 +214,90 @@ def test_concurrent_identical_orders_fill_once(service):
     fills = [o for o in outcomes if isinstance(o, dict)]
     assert len(fills) == 6 and len({o["order_id"] for o in fills}) == 1
     assert svc.account()["positions"][0]["quantity"] == "1.000000"
+
+
+# ------------------------------------------------------------------ fixes from the independent review
+def test_a_quote_with_unknown_age_is_not_traded_on(tmp_path):
+    """Review finding 7: an ageless quote used to bypass the staleness gate."""
+    clock.set_clock(OPEN_CLOCK)
+    ageless = FakeQuotes({"F": 11.0}, age=None)  # type: ignore[arg-type]
+    svc = PaperAccountService(ageless, db_path=tmp_path / "a.sqlite3", config=PaperConfig(**ZERO_COST))
+    with pytest.raises(OrderRejected) as refused:
+        svc.submit_order(side="buy", symbol="F", quantity="1", simulation=True)
+    assert refused.value.code == "unknown_quote_age"
+
+
+def test_a_buy_is_rejected_when_an_existing_position_has_no_live_mark(service):
+    """Review finding 8: the caps used to be computed against average-cost fallbacks."""
+    svc, quotes = service
+    svc.submit_order(side="buy", symbol="F", quantity="1", simulation=True)
+    del quotes.prices["F"]
+    with pytest.raises(OrderRejected) as refused:
+        svc.submit_order(side="buy", symbol="AAPL", notional="5", simulation=True)
+    assert refused.value.code == "marks_unavailable"
+    quotes.prices["F"] = 11.0
+    assert svc.submit_order(side="buy", symbol="AAPL", notional="5", simulation=True)["status"] == "filled"
+
+
+def test_a_notional_order_never_costs_more_than_the_notional(tmp_path):
+    """Review finding 4: rounding the cost and the fee up could exceed the stated dollar amount."""
+    clock.set_clock(OPEN_CLOCK)
+    quotes = FakeQuotes({"F": 9.9010})
+    svc = PaperAccountService(quotes, db_path=tmp_path / "n.sqlite3", config=PaperConfig(commission_rate=Decimal("0.01"), **ZERO_COST))
+    order = svc.submit_order(side="buy", symbol="F", notional="10.00", simulation=True)
+    assert Decimal(order["gross"]) + Decimal(order["fee"]) <= Decimal("10.00")
+    # and an all-in order for exactly the cash on hand fills rather than bouncing
+    all_in = PaperAccountService(FakeQuotes({"F": 9.9010}), db_path=tmp_path / "n2.sqlite3", config=PaperConfig(max_position_share=Decimal("1"), max_invested_share=Decimal("1"), **ZERO_COST))
+    filled = all_in.submit_order(side="buy", symbol="F", notional="50.00", simulation=True)
+    assert filled["status"] == "filled" and Decimal(filled["gross"]) <= Decimal("50.00")
+
+
+def test_a_rejected_order_does_not_consume_the_client_order_id(service):
+    svc, quotes = service
+    quotes.state = "after_close"
+    with pytest.raises(OrderRejected):
+        svc.submit_order(side="buy", symbol="F", quantity="1", client_order_id="retry-me", simulation=True)
+    quotes.state = "open"
+    order = svc.submit_order(side="buy", symbol="F", quantity="1", client_order_id="retry-me", simulation=True)
+    assert order["status"] == "filled" and "duplicate" not in order
+    # equivalent spellings of the same quantity are the same request
+    again = svc.submit_order(side="buy", symbol="F", quantity="1.0", client_order_id="retry-me", simulation=True)
+    assert again["duplicate"] is True
+
+
+def test_two_processes_cannot_spend_the_same_cash(tmp_path):
+    """Review finding 3: BEGIN IMMEDIATE serialises read-check-write across processes."""
+    import multiprocessing as mp
+
+    db = tmp_path / "race.sqlite3"
+
+    def worker(name: str, out):
+        from datetime import datetime, timezone
+
+        from app.core import clock as c
+        c.set_clock(lambda: datetime(2026, 3, 10, 15, 30, tzinfo=timezone.utc))
+        quotes = FakeQuotes({"F": 45.0})
+        svc = PaperAccountService(quotes, db_path=db, config=PaperConfig(max_position_share=Decimal("1"), max_invested_share=Decimal("1"), **ZERO_COST))
+        try:
+            order = svc.submit_order(side="buy", symbol="F", quantity="1", client_order_id=name, simulation=True)
+            out.put((name, order["status"]))
+        except OrderRejected as exc:
+            out.put((name, exc.code))
+
+    # create the account first so both workers race on the same one
+    clock.set_clock(OPEN_CLOCK)
+    PaperAccountService(FakeQuotes({"F": 45.0}), db_path=db, config=PaperConfig(**ZERO_COST)).account()
+    for _ in range(10):
+        queue = mp.Queue()
+        a = mp.Process(target=worker, args=("a", queue))
+        b = mp.Process(target=worker, args=("b", queue))
+        a.start(); b.start(); a.join(20); b.join(20)
+        outcomes = sorted(queue.get() for _ in range(2))
+        statuses = [status for _, status in outcomes]
+        assert statuses.count("filled") <= 1, statuses  # never two $45 fills from $50
+        service = PaperAccountService(FakeQuotes({"F": 45.0}), db_path=db, config=PaperConfig(max_position_share=Decimal("1"), max_invested_share=Decimal("1"), **ZERO_COST))
+        account = service.account()  # and the account stays readable
+        if statuses.count("filled") == 1:
+            break
+    if account["positions"]:
+        service.submit_order(side="sell", symbol="F", quantity=account["positions"][0]["quantity"], simulation=True)

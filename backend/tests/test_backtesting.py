@@ -268,3 +268,49 @@ def test_invalid_configuration_is_refused():
         run_backtest(frame.drop(columns=["Low"]), LONG(frame))
     with pytest.raises(ValidationFailed):
         run_backtest(pd.concat([frame, frame.iloc[[-1]]]), LONG(pd.concat([frame, frame.iloc[[-1]]])))
+
+
+# ------------------------------------------------------------------ fixes from the independent review
+def test_a_stock_split_is_not_booked_as_a_loss():
+    """Review finding 1: as-traded prices halve at a 2:1 split; the share count must double."""
+    frame = flat_ohlcv([100.0, 100.0, 100.0, 50.0, 50.0])
+    frame["Stock Splits"] = [0.0, 0.0, 0.0, 2.0, 0.0]
+    result = buy_and_hold(frame, _free(initial_cash=Decimal("10000")))
+    assert result.equity.tolist() == [10000.0] * 5  # no phantom loss
+    assert result.book.quantity("ASSET") == Decimal("200")
+    assert result.counters.get("splits_applied") == 1
+    # and a stop keyed to the pre-split entry does not fire on the split itself
+    stopped = run_backtest(frame, LONG(frame), _free(initial_cash=Decimal("10000"), stop_loss_pct=Decimal("0.10")))
+    assert stopped.counters["stop_exits"] == 0 and stopped.equity.iloc[-1] == 10000.0
+    result.book.check({"ASSET": Decimal("50")})
+
+
+def test_a_forced_exit_completes_even_when_the_minimum_fee_exceeds_the_proceeds():
+    """Review finding 2: the whole backtest used to crash with OrderRejected."""
+    frame = flat_ohlcv([100.0, 100.0, 0.4, 0.4, 0.4])
+    costs = CostModel(commission_rate=Decimal("0"), commission_minimum=Decimal("1.00"), half_spread_bps=Decimal("0"), slippage_bps=Decimal("0"))
+    target = pd.Series([1, 1, 0, 0, 0], index=frame.index, dtype=float)
+    result = run_backtest(frame, target, BacktestConfig(initial_cash=Decimal("50"), costs=costs))
+    assert result.trades[0]["exit_reason"] == "signal_exit"
+    assert float(result.book.fees) <= 1.0 + 1.0  # entry fee plus a capped exit fee
+    _reconciles(result)
+
+
+def test_a_stop_inside_the_cost_band_is_refused():
+    """Review finding 10: with 5 bps of adverse cost, a 1 bp stop fires at prices never traded."""
+    frame = flat_ohlcv([100.0] * 4)
+    with pytest.raises(ValidationFailed):
+        run_backtest(frame, LONG(frame), BacktestConfig(stop_loss_pct=Decimal("0.0001")))
+
+
+def test_numpy_scalars_are_accepted_as_money():
+    """Review finding 9: a numpy-2 float scalar used to raise a raw decimal error."""
+    import numpy as np
+
+    from app.accounting.book import Book
+    from app.accounting.money import D
+
+    assert D(np.float64(1.5)) == Decimal("1.5") and D(np.int64(3)) == Decimal("3")
+    book = Book(Decimal("100"))
+    book.buy("X", np.float64(0.5), np.float64(10.0))
+    assert book.quantity("X") == Decimal("0.5")

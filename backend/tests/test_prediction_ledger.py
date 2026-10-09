@@ -122,10 +122,11 @@ def test_the_chain_detects_tampering(setup, tmp_path):
     ledger.path.write_text("\n".join(lines) + "\n")
     report = PredictionLedger(tmp_path, horizon=5).verify()
     assert not report["intact"] and report["broken_at_line"] == 3  # line 3's prev_hash no longer matches the edited line 2
-    # a deleted line is also caught
+    # deleting lines from the end leaves a valid chain, but the head anchor records the count
     ledger.path.write_text("\n".join(lines[:1]) + "\n")
     fresh = PredictionLedger(tmp_path, horizon=5)
-    assert fresh.verify()["intact"]  # one line alone is a valid chain head...
+    truncated = fresh.verify()
+    assert not truncated["intact"] and "removed from the end" in truncated["problem"]
     assert fresh.events()[0]["prev_hash"] == GENESIS
 
 

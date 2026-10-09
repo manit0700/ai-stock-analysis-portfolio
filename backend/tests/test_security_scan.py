@@ -25,11 +25,12 @@ def _scan_text(text: str) -> list[str]:
 
 
 def test_the_scanner_catches_the_shapes_that_were_actually_found():
-    # the committed Finnhub key's shape (audit S1); value altered — not-a-secret
-    assert _scan_text('const KEY = "d1kvaaaa01qtaaaaaaaad1kvaaaa01qtaaaaaag0";'.replace("KEY", "K"))
-    assert _scan_text('url = "wss://ws.finnhub.io?token=abcdefghij1234567890"')
+    # Planted values are assembled at run time so this test file itself scans clean.
+    finnhub_shaped = "d1kv" + "a" * 4 + "01qt" + "a" * 10 + "d1kv" + "a" * 4 + "01qt" + "a" * 9 + "g0"
+    assert _scan_text(f'const K = "{finnhub_shaped[:40]}";')
+    assert _scan_text('url = "wss://ws.finnhub.io?' + 'token=' + 'abcdefghij' + '1234567890"')
     assert _scan_text('OPENAI_API_KEY = "sk-' + "A" * 40 + '"')
-    assert _scan_text("-----BEGIN RSA PRIVATE KEY-----")
+    assert _scan_text("-----BEGIN RSA PRIVATE" + " KEY-----")
 
 
 def test_the_scanner_ignores_placeholders_and_marked_fixtures():

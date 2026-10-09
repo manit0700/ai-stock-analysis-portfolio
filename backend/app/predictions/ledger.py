@@ -19,9 +19,11 @@ prices (the fault this module replaces).
 """
 from __future__ import annotations
 
+import fcntl
 import hashlib
 import json
 import threading
+from contextlib import contextmanager
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -57,6 +59,20 @@ class PredictionLedger:
         key = str(self.path)
         with _LOCKS_GUARD:
             self._lock = _LOCKS.setdefault(key, threading.Lock())
+        self._lockfile = self.directory / f"ledger-{self.horizon}d.lock"
+        self._headfile = self.directory / f"ledger-{self.horizon}d.head.json"
+
+    @contextmanager
+    def _file_lock(self):
+        """An OS-level lock beside the in-process one, so writers in different processes cannot
+        interleave reads of ``prev_hash`` (the reviewer broke the chain with two honest writers)."""
+        self.directory.mkdir(parents=True, exist_ok=True)
+        with self._lockfile.open("a+") as handle:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
     # ------------------------------------------------------------------ plumbing
     def _read_lines(self) -> list[str]:
@@ -68,12 +84,18 @@ class PredictionLedger:
         return [json.loads(line) for line in self._read_lines()]
 
     def _append(self, event: dict[str, Any]) -> dict[str, Any]:
+        """Append under the file lock and advance the head anchor (count + hash of the last line).
+
+        The anchor is what lets ``verify`` notice a truncated tail, which an unanchored hash chain
+        cannot see.
+        """
         lines = self._read_lines()
         event = {**event, "prev_hash": _line_hash(lines[-1]) if lines else GENESIS}
         line = json.dumps(event, sort_keys=True, separators=(",", ":"), default=str)
-        self.directory.mkdir(parents=True, exist_ok=True)
         with self.path.open("a", encoding="utf-8") as fh:
             fh.write(line + "\n")
+            fh.flush()
+        self._headfile.write_text(json.dumps({"events": len(lines) + 1, "last_hash": _line_hash(line)}), encoding="utf-8")
         return event
 
     def verify(self) -> dict[str, Any]:
@@ -85,9 +107,16 @@ class PredictionLedger:
                 event = json.loads(line)
             except ValueError:
                 return {"intact": False, "events": number - 1, "broken_at_line": number, "problem": "not valid JSON"}
-            if event.get("prev_hash") != previous:
+            if not isinstance(event, dict) or event.get("prev_hash") != previous:
                 return {"intact": False, "events": number - 1, "broken_at_line": number, "problem": "hash chain broken: a line was edited, removed or reordered"}
             previous = _line_hash(line)
+        if self._headfile.exists():
+            try:
+                head = json.loads(self._headfile.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                head = None
+            if head and (head.get("events") != len(lines) or (lines and head.get("last_hash") != _line_hash(lines[-1]))):
+                return {"intact": False, "events": len(lines), "problem": f"the head anchor records {head.get('events')} events; the file holds {len(lines)}. Lines were removed from the end or the anchor was altered."}
         return {"intact": True, "events": len(lines)}
 
     # ------------------------------------------------------------------ issuing
@@ -102,9 +131,14 @@ class PredictionLedger:
             raise ValidationFailed(f"This ledger records {self.horizon}-session forecasts, not {horizon}.")
         model = forecast.get("model") or {}
         pid = prediction_id(symbol, as_of, horizon, model.get("id"))
-        with self._lock:
+        with self._lock, self._file_lock():
             existing = {e["prediction_id"]: e for e in self.events() if e["event"] == "prediction_issued"}
             if pid in existing:
+                if abs(float(existing[pid]["probability_up"]) - float(forecast["probability_up"])) > 1e-9:
+                    raise Conflict(
+                        "This (symbol, date, horizon, model) was already recorded with a different probability. The inputs must have changed; the original record stands.",
+                        details={"prediction_id": pid, "recorded": existing[pid]["probability_up"], "offered": forecast["probability_up"]},
+                    )
                 return {**existing[pid], "duplicate": True}
             event = self._append({
                 "event": "prediction_issued",
@@ -132,7 +166,7 @@ class PredictionLedger:
     def resolve_due(self, market_data: Any, *, today: date | None = None, limit: int = 500) -> dict[str, Any]:
         """Resolve every issued prediction whose window has closed and is not yet resolved."""
         today = today or cal.last_completed_session(utcnow())
-        with self._lock:
+        with self._lock, self._file_lock():
             events = self.events()
             issued = {e["prediction_id"]: e for e in events if e["event"] == "prediction_issued"}
             resolved_ids = {e["prediction_id"] for e in events if e["event"] == "prediction_resolved"}

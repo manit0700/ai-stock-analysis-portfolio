@@ -27,6 +27,11 @@ BPS = Decimal("0.0001")
 
 def D(value: Any) -> Decimal:  # noqa: N802 - short on purpose, used everywhere
     """Convert to ``Decimal`` without inheriting a float's binary error. Rejects NaN and infinity."""
+    if hasattr(value, "item") and not isinstance(value, (str, bytes, Decimal)):
+        try:
+            value = value.item()  # numpy/pandas scalars become plain Python numbers
+        except (ValueError, AttributeError):
+            pass
     if isinstance(value, Decimal):
         number = value
     elif isinstance(value, bool):
