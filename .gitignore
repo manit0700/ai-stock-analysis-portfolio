@@ -45,3 +45,10 @@ backend/data/*.jsonl
 # Large generated datasets
 *.parquet
 *.csv
+
+# Local runtime state (ledgers, caches, snapshots, the paper-trading database)
+backend/data/
+!backend/data/.gitkeep
+
+# TypeScript incremental build cache
+*.tsbuildinfo
