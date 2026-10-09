@@ -7,11 +7,10 @@ import {
   LineSeries,
   ColorType,
   CrosshairMode,
-  LastPriceAnimationMode,
   createChart,
 } from "lightweight-charts";
 import type { PriceHistoryPoint } from "@/lib/types";
-import { useFinnhubWS } from "@/lib/useFinnhubWS";
+import { freshnessLabel, useLiveQuote } from "@/lib/useLiveQuote";
 
 type Time = import("lightweight-charts").Time;
 
@@ -34,10 +33,11 @@ export default function StockChart({ history, ticker }: { history: PriceHistoryP
   const [livePrice, setLivePrice] = useState<number | null>(null);
   const [prevClose, setPrevClose] = useState<number | null>(null);
   const [ohlcv, setOhlcv] = useState<{ o: number; h: number; l: number; c: number; v: number } | null>(null);
-  const [tickCount, setTickCount] = useState(0);
 
-  // Real Finnhub WebSocket ticks
-  const { lastTick, connected } = useFinnhubWS(ticker || null);
+  // Quotes come from the backend, which labels them live, delayed or historical.
+  // The old version opened a Finnhub websocket from the browser with an embedded API key,
+  // and invented random price movement when the socket was down. Both are gone.
+  const { quote } = useLiveQuote(ticker || null);
 
   // ── Build + mount chart ─────────────────────────────────────────
   useEffect(() => {
@@ -62,7 +62,6 @@ export default function StockChart({ history, ticker }: { history: PriceHistoryP
       },
       timeScale: {
         borderColor: "rgba(255,140,0,0.15)",
-        textColor: "rgba(255,140,0,0.5)",
         timeVisible: true,
         secondsVisible: false,
       },
@@ -82,7 +81,6 @@ export default function StockChart({ history, ticker }: { history: PriceHistoryP
       wickUpColor: "#00cc5580",
       wickDownColor: "#ff444480",
       borderVisible: false,
-      lastPriceAnimation: LastPriceAnimationMode.Continuous,
     });
 
     const candles = history.map((p) => ({
@@ -151,39 +149,17 @@ export default function StockChart({ history, ticker }: { history: PriceHistoryP
     };
   }, [history]);
 
-  // ── Apply real WS tick ──────────────────────────────────────────
+  // ── Apply a backend quote (a real price with a stated age; never invented) ──
   useEffect(() => {
-    if (!lastTick || !candleSeriesRef.current || !candleDataRef.current.length) return;
-
-    const price = lastTick.price;
+    if (!quote || quote.price == null || !candleSeriesRef.current || !candleDataRef.current.length) return;
+    const price = quote.price;
     const last = { ...candleDataRef.current[candleDataRef.current.length - 1] };
     last.close = price;
     last.high = Math.max(last.high, price);
     last.low = Math.min(last.low, price);
     candleSeriesRef.current.update({ ...last, time: last.time as Time });
     setLivePrice(price);
-    setTickCount((n) => n + 1);
-  }, [lastTick]);
-
-  // ── Fallback: simulated tick when WS not connected ──────────────
-  useEffect(() => {
-    if (connected) return; // real ticks are flowing — no simulation needed
-    if (!candleSeriesRef.current || history.length === 0) return;
-
-    const id = setInterval(() => {
-      if (!candleSeriesRef.current || !candleDataRef.current.length) return;
-      const last = { ...candleDataRef.current[candleDataRef.current.length - 1] };
-      const noise = last.close * 0.0003 * (Math.random() - 0.495);
-      const newClose = Math.max(last.close + noise, last.low * 0.998);
-      last.close = newClose;
-      last.high = Math.max(last.high, newClose);
-      last.low = Math.min(last.low, newClose);
-      candleSeriesRef.current.update({ ...last, time: last.time as Time });
-      setLivePrice(newClose);
-    }, 1000);
-
-    return () => clearInterval(id);
-  }, [connected, history]);
+  }, [quote]);
 
   const isPositive = livePrice != null && prevClose != null ? livePrice >= prevClose : true;
   const changePct = livePrice != null && prevClose != null && prevClose !== 0
@@ -218,12 +194,12 @@ export default function StockChart({ history, ticker }: { history: PriceHistoryP
         <div className="ml-auto flex items-center gap-3 text-[9px]">
           <span><span className="inline-block w-3 h-px bg-[#ff8c00] mr-1 align-middle"></span>SMA20</span>
           <span><span className="inline-block w-3 h-px bg-[#0096ff] mr-1 align-middle"></span>SMA50</span>
-          {connected && (
-            <span className="bb-dim">TICKS: <span className="bb-white">{tickCount}</span></span>
+          {quote?.age_seconds != null && (
+            <span className="bb-dim">AGE: <span className="bb-white">{Math.round(quote.age_seconds)}s</span></span>
           )}
-          <span className={`flex items-center gap-1 ${connected ? "bb-green" : "bb-amber"}`}>
-            <span className={`inline-block w-1.5 h-1.5 rounded-full ${connected ? "bg-[#00cc55] animate-pulse" : "bg-[#ff8c00] animate-pulse"}`}></span>
-            {connected ? "WS·LIVE" : "POLLING"}
+          <span className={`flex items-center gap-1 ${quote?.freshness === "live" ? "bb-green" : quote?.freshness === "delayed" ? "bb-amber" : "bb-dim"}`}>
+            <span className={`inline-block w-1.5 h-1.5 rounded-full ${quote?.freshness === "live" ? "bg-[#00cc55] animate-pulse" : quote?.freshness === "delayed" ? "bg-[#ff8c00]" : "bg-[#444]"}`}></span>
+            {freshnessLabel(quote)}
           </span>
         </div>
       </div>

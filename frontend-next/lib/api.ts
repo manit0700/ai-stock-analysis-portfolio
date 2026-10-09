@@ -167,3 +167,118 @@ export async function fetchBotPerformance(): Promise<BotPerformanceResponse> {
 export async function resolveBotOutcomes(): Promise<{ performance: BotPerformanceResponse; resolved: number; skipped: number }> {
   return apiFetch("/api/bot/resolve-outcomes", { method: "POST" });
 }
+
+// ── v2: forecasts, the prediction ledger and the simulated $50 account ─────────
+
+export type ForecastResponse = {
+  symbol: string;
+  status: "model" | "baseline" | "unavailable";
+  probability_up: number | null;
+  base_rate?: number | null;
+  edge_established?: boolean;
+  horizon_sessions: number;
+  target: string;
+  as_of?: string;
+  window?: { first_session: string; last_session: string };
+  model: { id: string | null; kind: string; error?: string | null };
+  expected_return?: { value: number | null; method: string } | null;
+  range?: { method: string; p05: number; p10: number; p50: number; p90: number; p95: number; meaning: string } | null;
+  message?: string;
+  reason?: { code: string; message: string };
+  data_source?: { provider: string; freshness: string; retrieved_at: string };
+  prediction_id?: string;
+  disclaimer: string;
+};
+
+export type PredictionRow = {
+  prediction_id: string; at: string; symbol: string; as_of: string; horizon_sessions: number;
+  window_last_session: string; model_id: string | null; model_kind: string; probability_up: number;
+  resolved: boolean;
+  outcome: { realized_return: number; outcome_up: boolean; correct: boolean; window_complete: boolean; within_stated_range: boolean | null; at: string } | null;
+};
+
+export type PredictionLedgerResponse = {
+  history: PredictionRow[];
+  performance: {
+    issued: number; resolved: number; open: number; resolved_with_complete_window: number;
+    accuracy: number | null; majority_class_accuracy?: number; brier: number | null; brier_of_base_rate?: number;
+    brier_skill?: number | null; range_coverage?: number | null; note?: string;
+    chain?: { intact: boolean; events: number };
+  };
+};
+
+export type PaperPosition = {
+  symbol: string; quantity: string; average_cost: string; cost_basis: string;
+  price: string | null; market_value: string | null; unrealized_pnl: string | null;
+};
+
+export type PaperAccount = {
+  simulation: true; banner: string; account_id: string; created_at: string; paused: boolean;
+  starting_cash: string; cash: string; equity: string | null; market_value: string | null;
+  realized_pnl: string; unrealized_pnl: string | null; total_pnl: string | null; fees_paid: string; dividends: string;
+  positions: PaperPosition[]; orders_submitted: number; marks_missing_live_price: string[]; mark_note?: string | null;
+};
+
+export type PaperOrder = {
+  order_id: string; client_order_id: string; at: string; side: "buy" | "sell"; symbol: string;
+  status: "filled" | "rejected"; reason: string | null; quantity: string | null; fill_price: string | null;
+  gross: string | null; fee: string | null; cash_after: string | null; realized: string | null;
+};
+
+export type PaperPerformance = {
+  banner: string; starting_cash: string; equity: string | null; total_pnl: string | null; realized_pnl: string;
+  unrealized_pnl: string | null; fees_paid: string; return_pct: number | null; closed_sales: number;
+  winning_sales: number; win_rate_pct: number | null;
+};
+
+export type ForecastStatus = {
+  champion: string | null; edge_established: boolean; model_state: string;
+  baseline?: { base_rate?: number; verdict?: string; from_run?: string } | null;
+  schema: { name: string; version: string; hash: string };
+};
+
+async function v2<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}/api/v2${path}`, {
+    headers: { "Content-Type": "application/json" },
+    cache: "no-store",
+    ...init,
+  });
+  const body = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(body?.error?.message ?? `Request failed with status ${response.status}`);
+  }
+  return body as T;
+}
+
+export function fetchForecast(symbol: string): Promise<ForecastResponse> {
+  return v2<ForecastResponse>(`/stocks/${encodeURIComponent(symbol)}/forecast`);
+}
+
+export function fetchForecastStatus(): Promise<ForecastStatus> {
+  return v2<ForecastStatus>("/forecast/status");
+}
+
+export function fetchPredictionLedger(symbol?: string): Promise<PredictionLedgerResponse> {
+  const query = symbol ? `?symbol=${encodeURIComponent(symbol)}` : "";
+  return v2<PredictionLedgerResponse>(`/predictions${query}`);
+}
+
+export function fetchPaperAccount(): Promise<PaperAccount> {
+  return v2<PaperAccount>("/paper/account");
+}
+
+export function fetchPaperOrders(limit = 50): Promise<{ orders: PaperOrder[] }> {
+  return v2<{ orders: PaperOrder[] }>(`/paper/orders?limit=${limit}`);
+}
+
+export function fetchPaperPerformance(): Promise<PaperPerformance> {
+  return v2<PaperPerformance>("/paper/performance");
+}
+
+export function submitPaperOrder(order: { side: "buy" | "sell"; symbol: string; quantity?: number; notional?: number; client_order_id?: string }): Promise<PaperOrder> {
+  return v2<PaperOrder>("/paper/orders", { method: "POST", body: JSON.stringify({ ...order, simulation: true }) });
+}
+
+export function resetPaperAccount(): Promise<{ account_id: string; starting_cash: string }> {
+  return v2<{ account_id: string; starting_cash: string }>("/paper/reset", { method: "POST", body: JSON.stringify({ reason: "reset from the dashboard" }) });
+}

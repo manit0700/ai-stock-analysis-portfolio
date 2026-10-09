@@ -7,12 +7,11 @@ import {
   ColorType,
   CrosshairMode,
   LineSeries,
-  LastPriceAnimationMode,
   createChart,
 } from "lightweight-charts";
 import type { SimulationResponse } from "@/lib/types";
-import { fetchStockQuote } from "@/lib/api";
-import { useFinnhubWS } from "@/lib/useFinnhubWS";
+
+import { freshnessLabel, useLiveQuote } from "@/lib/useLiveQuote";
 
 type Time = import("lightweight-charts").Time;
 
@@ -92,9 +91,7 @@ export default function SimulationChart({ simulation }: { simulation: Simulation
 
   const [livePrice, setLivePrice] = useState<number | null>(null);
   const [liveChange, setLiveChange] = useState<number | null>(null);
-  const [isLive, setIsLive] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string>("");
-  const [tickCount, setTickCount] = useState(0);
   const [layers, setLayers] = useState({
     candles: true,
     scenarios: true,
@@ -105,8 +102,8 @@ export default function SimulationChart({ simulation }: { simulation: Simulation
     ml: true,
   });
 
-  // Real Finnhub WebSocket
-  const { lastTick, connected } = useFinnhubWS(simulation.ticker || null);
+  // A backend quote with a stated provider and age; nothing is invented between polls.
+  const { quote } = useLiveQuote(simulation.ticker || null);
 
   function resetView() {
     if (!chartRef.current || !candleDataRef.current.length) return;
@@ -217,7 +214,6 @@ export default function SimulationChart({ simulation }: { simulation: Simulation
       },
       timeScale: {
         borderColor: "rgba(255,140,0,0.15)",
-        textColor: "rgba(255,140,0,0.5)",
         timeVisible: true,
         secondsVisible: getIntervalSeconds(simulation.interval) < 3600,
         fixLeftEdge: false,
@@ -255,7 +251,6 @@ export default function SimulationChart({ simulation }: { simulation: Simulation
       wickUpColor: "#00cc5560",
       wickDownColor: "#ff444460",
       borderVisible: false,
-      lastPriceAnimation: LastPriceAnimationMode.Continuous,
     });
     candleSeries.setData(candles);
     candleSeriesRef.current = candleSeries;
@@ -285,11 +280,11 @@ export default function SimulationChart({ simulation }: { simulation: Simulation
       ]);
     }
 
-    function chartPoints(points?: { time: string | number; value: number }[]) {
+    function chartPoints(points?: { time?: string | number; date?: string; value: number }[]) {
       if (!points?.length) return [];
       let previous = lastTs;
       const projected = points.slice(0, horizon).map((point, i) => {
-        const rawTime = toUnixTime(point.time, Number(futureTimes[i]));
+        const rawTime = toUnixTime(point.time ?? point.date ?? Number(futureTimes[i]), Number(futureTimes[i]));
         const time = rawTime <= previous ? previous + intervalSeconds : rawTime;
         previous = time;
         return {
@@ -503,12 +498,13 @@ export default function SimulationChart({ simulation }: { simulation: Simulation
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [simulation]);
 
-  // ── Apply real WS tick ──────────────────────────────────────────
+  // ── Apply a backend quote to the last candle ───────────────────
   useEffect(() => {
-    if (!lastTick || !candleSeriesRef.current || !candleDataRef.current.length) return;
-    const price = lastTick.price;
+    if (!quote || quote.price == null || !candleSeriesRef.current || !candleDataRef.current.length) return;
+    const price = quote.price;
     const intervalSeconds = getIntervalSeconds(simulation.interval);
-    const tickTime = alignToInterval(Math.floor((lastTick.timestamp || Date.now()) / 1000), intervalSeconds);
+    const stamp = quote.retrieved_at ? Math.floor(new Date(quote.retrieved_at).getTime() / 1000) : Math.floor(Date.now() / 1000);
+    const tickTime = alignToInterval(stamp, intervalSeconds);
     const prev = candleDataRef.current[candleDataRef.current.length - 1];
     const last = tickTime > prev.time
       ? { time: tickTime, open: prev.close, high: price, low: price, close: price }
@@ -518,65 +514,9 @@ export default function SimulationChart({ simulation }: { simulation: Simulation
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (candleSeriesRef.current as any).update({ ...last, time: last.time as Time });
     setLivePrice(price);
-    setIsLive(true);
+    setLiveChange(quote.change_pct);
     setLastUpdated(new Date().toLocaleTimeString("en-US", { hour12: false }));
-    setTickCount((n) => n + 1);
-  }, [lastTick, simulation.interval]);
-
-  // ── Fallback: REST poll every 3s when WS not connected ──────────
-  useEffect(() => {
-    if (connected) return;
-    if (!simulation.ticker || !simulation.recent_history?.length) return;
-
-    const poll = async () => {
-      try {
-        const q = await fetchStockQuote(simulation.ticker);
-        const price = q.quote.current_price;
-        setLivePrice(price);
-        setLiveChange(q.quote.change_pct);
-        setIsLive(true);
-        setLastUpdated(new Date().toLocaleTimeString("en-US", { hour12: false }));
-        if (candleSeriesRef.current && candleDataRef.current.length) {
-          const intervalSeconds = getIntervalSeconds(simulation.interval);
-          const pollTime = alignToInterval(Math.floor(Date.now() / 1000), intervalSeconds);
-          const prev = candleDataRef.current[candleDataRef.current.length - 1];
-          const last = pollTime > prev.time
-            ? { time: pollTime, open: prev.close, high: price, low: price, close: price }
-            : { ...prev, close: price, high: Math.max(prev.high, price), low: Math.min(prev.low, price) };
-          if (pollTime > prev.time) candleDataRef.current.push(last);
-          else candleDataRef.current[candleDataRef.current.length - 1] = last;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (candleSeriesRef.current as any).update({ ...last, time: last.time as Time });
-        }
-      } catch { setIsLive(false); }
-    };
-    poll();
-    const id = setInterval(poll, 3000);
-    return () => clearInterval(id);
-  }, [connected, simulation.ticker, simulation.recent_history, simulation.interval]);
-
-  // ── Fallback: simulated micro-tick when WS not connected ────────
-  useEffect(() => {
-    if (connected) return;
-    if (!simulation.recent_history?.length) return;
-    const id = setInterval(() => {
-      if (!candleSeriesRef.current || !candleDataRef.current.length) return;
-      const intervalSeconds = getIntervalSeconds(simulation.interval);
-      const simTime = alignToInterval(Math.floor(Date.now() / 1000), intervalSeconds);
-      const prev = candleDataRef.current[candleDataRef.current.length - 1];
-      const noise = prev.close * 0.0003 * (Math.random() - 0.495);
-      const newClose = Math.max(prev.close + noise, prev.low * 0.998);
-      const last = simTime > prev.time
-        ? { time: simTime, open: prev.close, high: newClose, low: newClose, close: newClose }
-        : { ...prev, close: newClose, high: Math.max(prev.high, newClose), low: Math.min(prev.low, newClose) };
-      if (simTime > prev.time) candleDataRef.current.push(last);
-      else candleDataRef.current[candleDataRef.current.length - 1] = last;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (candleSeriesRef.current as any).update({ ...last, time: last.time as Time });
-      setLivePrice(newClose);
-    }, 1000);
-    return () => clearInterval(id);
-  }, [connected, simulation.recent_history, simulation.interval]);
+  }, [quote, simulation.interval]);
 
   const { dominant_scenario, confidence, risk_level, probabilities } = simulation;
   const isPositive = (liveChange ?? 0) >= 0;
@@ -612,10 +552,9 @@ export default function SimulationChart({ simulation }: { simulation: Simulation
           <span className="flex items-center gap-1"><span className="inline-block w-4 h-0.5 bg-[#ff8c00]"></span>SIDE {((probabilities?.sideways ?? 0) * 100).toFixed(0)}%</span>
           <span className="flex items-center gap-1"><span className="inline-block w-4 h-0.5 bg-[#ffffff50]"></span>ML</span>
           <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 border border-[#00cc55aa] bg-[#00cc5545]"></span>MODEL CANDLE</span>
-          {connected && <span className="bb-dim">TICKS:<span className="bb-white ml-1">{tickCount}</span></span>}
-        <span className={`flex items-center gap-1 ${connected ? "bb-green" : isLive ? "bb-amber" : "bb-dim"}`}>
-            <span className={`inline-block w-1.5 h-1.5 rounded-full ${connected ? "bg-[#00cc55] animate-pulse" : isLive ? "bg-[#ff8c00] animate-pulse" : "bg-[#444]"}`}></span>
-            {connected ? `WS·LIVE ${lastUpdated}` : isLive ? `POLL ${lastUpdated}` : "STATIC"}
+        <span className={`flex items-center gap-1 ${quote?.freshness === "live" ? "bb-green" : quote?.freshness === "delayed" ? "bb-amber" : "bb-dim"}`}>
+            <span className={`inline-block w-1.5 h-1.5 rounded-full ${quote?.freshness === "live" ? "bg-[#00cc55] animate-pulse" : quote?.freshness === "delayed" ? "bg-[#ff8c00]" : "bg-[#444]"}`}></span>
+            {freshnessLabel(quote)}{lastUpdated ? ` ${lastUpdated}` : ""}
           </span>
         </div>
       </div>

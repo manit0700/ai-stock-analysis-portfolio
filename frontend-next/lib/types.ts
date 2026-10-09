@@ -222,6 +222,7 @@ export type BacktestResult = {
 export type SimilarityResult = {
   ticker: string;
   available: boolean;
+  error?: string;
   setups: SimilarSetup[];
   summary: {
     dominant_historical_outcome: string;

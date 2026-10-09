@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import SimulationChart from "@/components/SimulationChart";
+import PaperAccountTab from "@/components/PaperAccountTab";
 import StockChart from "@/components/StockChart";
 import {
   analyzePortfolio, compareStocks, copilotChat, fetchBacktestStrategies,
@@ -10,14 +11,13 @@ import {
   fetchStockOverview, fetchWatchlist, runBacktest, scanBotSignals, fetchBotPerformance, resolveBotOutcomes,
   runAgentTradeCandidates,
 } from "@/lib/api";
-import { fallbackSimulation, marketCards as mockMarketCards, newsItems as mockNewsItems } from "@/lib/mock-data";
 import type {
   AgentReportResponse, BacktestResult, CompareLeader, CompareResult, MacroConditions, MarketCard,
   NewsItem, PortfolioAnalysis, SimulationResponse, SimilarityResult,
   StockAnalysis, StockOverview, WatchlistItem, BotScanResponse, BotPerformanceResponse,
 } from "@/lib/types";
 
-type Tab = "overview" | "research" | "simulation" | "scanner" | "proof" | "portfolio" | "copilot" | "macro" | "compare" | "backtest";
+type Tab = "overview" | "research" | "simulation" | "scanner" | "proof" | "portfolio" | "account" | "copilot" | "macro" | "compare" | "backtest";
 
 // ── Clock ──────────────────────────────────────────────────────────
 function useClock() {
@@ -390,8 +390,22 @@ function SimulationTab({
   ticker: string; setTicker: (v: string) => void; period: string; setPeriod: (v: string) => void;
   interval: string; setIntervalValue: (v: string) => void;
   loadPrediction: (nextTicker?: string, nextPeriod?: string, nextInterval?: string) => void; isLoading: boolean;
-  simulation: SimulationResponse; dataStatus: string;
+  simulation: SimulationResponse | null; dataStatus: string;
 }) {
+  if (!simulation) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-3 text-center px-8">
+        <div className="bb-amber text-sm tracking-widest">{dataStatus}</div>
+        <div className="bb-dim text-[11px] max-w-md leading-5">
+          The simulation panel shows backend results only. Until the backend answers, there is
+          nothing to display — this interface does not invent prices or probabilities.
+        </div>
+        <button onClick={() => loadPrediction()} className="bb-btn mt-2 px-4 py-1 text-xs" disabled={isLoading}>
+          {isLoading ? "RUNNING..." : "RETRY"}
+        </button>
+      </div>
+    );
+  }
   const probs = simulation.probabilities;
   const intelligence = simulation.market_intelligence;
   const finalSignal = simulation.final_signal ?? intelligence?.final_signal;
@@ -1664,15 +1678,15 @@ export default function Home() {
   const [ticker, setTicker] = useState("NVDA");
   const [period, setPeriod] = useState("1y");
   const [simInterval, setSimInterval] = useState("1d");
-  const [simulation, setSimulation] = useState<SimulationResponse>(fallbackSimulation);
+  const [simulation, setSimulation] = useState<SimulationResponse | null>(null);  // never seeded with invented numbers
   const [isLoading, setIsLoading] = useState(false);
   const [dataStatus, setDataStatus] = useState("Connecting to backend...");
   const simulationRequestRef = useRef({ ticker: "NVDA", period: "1y", interval: "1d" });
   const activeTabRef = useRef<Tab>("overview");
 
   // ── Live data state ─────────────────────────────────────────────
-  const [liveMarketCards, setLiveMarketCards] = useState<MarketCard[]>(mockMarketCards);
-  const [liveNews, setLiveNews] = useState<NewsItem[]>(mockNewsItems as NewsItem[]);
+  const [liveMarketCards, setLiveMarketCards] = useState<MarketCard[]>([]);
+  const [liveNews, setLiveNews] = useState<NewsItem[]>([]);
   const [mlLoaded, setMlLoaded] = useState(false);
   const [mlVersion, setMlVersion] = useState<string | null>(null);
   const [marketCardsLoading, setMarketCardsLoading] = useState(true);
@@ -1771,8 +1785,8 @@ export default function Home() {
     } catch {
       const active = simulationRequestRef.current;
       if (active.ticker !== request.ticker || active.period !== request.period || active.interval !== request.interval) return;
-      setSimulation(fallbackSimulation);
-      setDataStatus("Backend unavailable — showing demo data");
+      setSimulation(null);
+      setDataStatus("Backend unavailable — no simulation shown (nothing is invented)");
     } finally {
       setIsLoading(false);
     }
@@ -2012,6 +2026,7 @@ export default function Home() {
     ["F8", "MACRO·DATA", "macro"],
     ["F9", "COMPARE", "compare"],
     ["F10", "BACKTEST", "backtest"],
+    ["F11", "$50·ACCOUNT", "account"],
   ];
 
   return (
@@ -2035,6 +2050,9 @@ export default function Home() {
           </div>
         </div>
         <div className="shrink-0 flex items-center gap-4 px-4 py-1.5 border-l border-[#ff8c0020] text-[11px]">
+          <span className="border border-[#ffcc00] px-2 py-0.5 text-[9px] font-bold tracking-widest text-[#ffcc00]" title="Every trade on this platform is simulated. No brokerage is connected and no real money can move.">
+            SIMULATED — NO REAL MONEY
+          </span>
           <span className="bb-amber font-bold tracking-widest">{time}</span>
         </div>
       </header>
@@ -2083,6 +2101,7 @@ export default function Home() {
             similarity={similarity} similarityLoading={similarityLoading}
           />
         )}
+        {tab === "account" && <PaperAccountTab />}
         {tab === "simulation" && (
           <SimulationTab
             ticker={ticker} setTicker={setTicker}
