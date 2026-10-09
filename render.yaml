@@ -7,19 +7,28 @@ services:
     buildCommand: pip install --upgrade pip && pip install -r backend/requirements-render.txt
     startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
-    autoDeploy: true
+    autoDeploy: false   # deploys are a human decision
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11.9
+        value: 3.12.8
+      - key: MARKETVISION_ENV
+        value: production
       - key: MARKETVISION_ENABLE_FINBERT
         value: "0"
+      # The free plan has NO persistent disk: the prediction ledger and the paper-trading
+      # database are lost on every restart. Attach a paid disk (mount backend/data) or treat
+      # this deployment as a stateless research API.
+      - key: MARKETVISION_CORS_ORIGINS
+        sync: false
       - key: MARKETVISION_TOOL_TOKEN
         sync: false
-      - key: FINNHUB_API_KEY
+      - key: MARKETVISION_ADMIN_TOKEN
         sync: false
-      - key: OPENAI_API_KEY
+      - key: FINNHUB_API_KEY
         sync: false
       - key: FRED_API_KEY
         sync: false
       - key: NEWSAPI_KEY
+        sync: false
+      - key: MARKETVISION_LLM_API_KEY
         sync: false

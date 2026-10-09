@@ -275,7 +275,7 @@ def test_http_client_does_not_retry_client_errors() -> None:
 
 
 def test_http_errors_never_contain_the_key_or_query_string() -> None:
-    secret = "sk_live_ABCDEF123456"
+    secret = "sk_live_ABCDEF123456"  # not-a-secret (test fixture)
     leaky = requests.ConnectionError(f"Max retries exceeded with url: /fred/series?api_key={secret}")
     session = FakeSession([leaky, leaky])
     with pytest.raises(ProviderError) as raised:

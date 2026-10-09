@@ -1,0 +1,62 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run: { working-directory: backend }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip, cache-dependency-path: backend/requirements-dev.txt }
+      - run: pip install -r requirements-dev.txt
+      - name: secret scan
+        run: python scripts/scan_secrets.py
+      - name: tests (offline; no provider is contacted)
+        run: python -m pytest
+        env: { MARKETVISION_OFFLINE: "1" }
+
+  backend-light:
+    # The core install must work with no ML training libraries (free-tier serving).
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run: { working-directory: backend }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip, cache-dependency-path: backend/requirements.txt }
+      - run: pip install -r requirements.txt
+      - name: the application imports and reports reduced capabilities
+        run: |
+          python - <<'PY'
+          import os
+          os.environ["MARKETVISION_OFFLINE"] = "1"
+          import app.main  # the whole route tree imports with the light install
+          from app.api.routes import health
+          body = health()
+          assert body["status"] == "ok", body
+          print(body["capabilities"])
+          PY
+
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run: { working-directory: frontend-next }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: frontend-next/package-lock.json }
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm run build
+
+# A scheduled job (daily prediction issue + resolution) would go here. It is deliberately NOT
+# enabled: decide first where the ledger lives, since GitHub Actions has no persistent disk.
+# A template is in docs/OPERATIONS.md.

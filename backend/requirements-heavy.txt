@@ -1,0 +1,8 @@
+# Heavyweight optional extras, off by default:
+#   FinBERT sentiment (MARKETVISION_ENABLE_FINBERT=1) needs transformers + torch (~2 GB).
+#   An OpenAI-compatible copilot needs the openai client; any compatible server works,
+#   including a local one via MARKETVISION_LLM_BASE_URL.
+-r requirements.txt
+openai==3.28.0
+transformers
+torch

@@ -1,19 +1,12 @@
-fastapi
-uvicorn[standard]
-pandas
-numpy
-yfinance
-python-dotenv
-pytest
-httpx
-joblib
-scikit-learn
-xgboost
-lightgbm
-catboost
-requests
-vaderSentiment
-openai
-python-dotenv
-transformers
-torch
+# Core runtime: the API, market data, features, forecast serving, ledger and the paper account.
+# Light enough for a free-tier container or GitHub Actions. Python 3.11+.
+fastapi==0.143.0
+uvicorn[standard]==0.54.0
+pandas==3.0.6
+numpy==2.5.3
+yfinance==1.7.0
+requests==2.34.2
+python-dotenv==1.2.4
+joblib==1.6.0
+scikit-learn==1.9.1
+vaderSentiment==3.3.2

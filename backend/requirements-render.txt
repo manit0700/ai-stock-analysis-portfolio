@@ -1,15 +1,4 @@
-fastapi
-uvicorn[standard]
-pandas
-numpy
-yfinance
-python-dotenv
-httpx
-joblib
-scikit-learn
-xgboost
-lightgbm
-catboost
-requests
-vaderSentiment
-openai
+# Render free tier: the core runtime plus the OpenAI client for copilot explanations.
+# Deliberately excludes torch/transformers (FinBERT) and training libraries.
+-r requirements.txt
+openai==3.28.0

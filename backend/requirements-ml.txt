@@ -1,0 +1,4 @@
+# Model evaluation and training (python -m app.forecast). Optional at serving time:
+# the API runs without these when no model needs them.
+-r requirements.txt
+lightgbm==4.7.0

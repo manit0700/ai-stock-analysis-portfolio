@@ -1,500 +1,120 @@
-# MarketVision AI - Stock Simulation & Portfolio Intelligence
+# MarketVision AI
 
-## Overview
+Stock research, probability forecasts and a **simulated** $50 trading account, built to be
+measurable and reproducible rather than impressive.
 
-MarketVision AI is an AI-powered market simulation and decision-intelligence platform. The goal is to help traders and investors understand market probabilities, future chart scenarios, portfolio risk, and research context without pretending to guarantee stock predictions.
+**SIMULATED TRADING — NO REAL MONEY.** There is no brokerage integration anywhere in this
+codebase. Forecasts are probability estimates from historical data, never guarantees and never
+financial advice, and a forecast never places an order.
 
-The current MVP includes:
+## What it tells you, honestly
 
-- a FastAPI backend that pulls market data from `yfinance`
-- research endpoints for single stocks, comparisons, news, simulation, and portfolio risk
-- a probability-based future chart simulation engine
-- bullish, bearish, sideways, and high-volatility scenario paths
-- signal promotion, scanner mode, signal ledger, and outcome resolution for paper-signal proof
-- AI-style reasoning summaries with risk notes and safety disclaimers
-- a Streamlit dashboard for stock buyers to explore the data visually
-- a premium Next.js/Tailwind UI concept in `frontend-next/`
-- an ML auto-tuning scaffold in `ml/` for local and Kaggle GPU training
+- A forecast endpoint serves the probability that a stock closes higher five sessions later.
+  **As of the October 2026 evaluation, no model beats the historical base rate** on out-of-sample
+  data, so the API serves the base rate and says so (`"edge_established": false`). A model only
+  starts serving after it passes a promotion rule that was committed to git before its holdout
+  was scored (`backend/app/forecast/promotion.py`).
+- Every response from the data layer names its provider, retrieval time, market time, freshness
+  (live / delayed / historical) and quality checks. Missing data stays missing; nothing is
+  invented, in the API or the interface.
+- Every issued forecast goes into an append-only, hash-chained ledger and is scored later on
+  exactly its own five-session window. Open predictions are never counted as wins.
 
-## Current MVP Scope
+## Layout
 
-- Stock overview endpoint with price history and company context
-- Stock analysis endpoint with moving averages, RSI, volatility, and a simple research stance
-- Future chart simulation endpoint with scenario probabilities and confidence bands
-- Stock news endpoint
-- Stock comparison endpoint for multiple tickers
-- Watchlist ranking endpoint
-- Portfolio analysis endpoint with weights, concentration checks, volatility, drawdown, and correlations
-- Streamlit dashboard with stock, watchlist, compare, and portfolio tabs
-- Healthcheck and test coverage for core API structure
-
-## Project Structure
-
-- `backend/`
-  FastAPI app, service layer, tests, and Python dependencies
-- `frontend/`
-  Streamlit dashboard for stock research and portfolio analysis
-- `notebooks/`
-  Reserved for experiments and model research
-- `PROJECT_PLAN.md`
-  Broader product roadmap
-
-## Backend Layout
-
-- `backend/app/main.py`
-  FastAPI entrypoint
-- `backend/app/services/market.py`
-  Stock overview, technical indicators, and news fetching
-- `backend/app/services/portfolio.py`
-  Portfolio-risk and allocation analysis
-- `backend/app/services/simulation.py`
-  Probability-based future chart simulation and strategy reasoning
-- `backend/tests/`
-  API and portfolio tests
-- `frontend/app.py`
-  Streamlit dashboard entrypoint
-- `frontend-next/`
-  Premium MarketVision AI command-center UI built with Next.js, TypeScript, Tailwind, Framer Motion, and TradingView Lightweight Charts
-- `ml/train_autotune.py`
-  Kaggle-ready model tuning pipeline for bullish/bearish/sideways market labels
-
-## Run Locally
-
-Install backend dependencies:
-
-```bash
-python3 -m pip install -r backend/requirements.txt
+```
+backend/
+  app/core/          configuration, secrets + log redaction, auth scopes, errors, clock
+  app/marketdata/    one door to Yahoo/Finnhub/FRED/NewsAPI/snapshots: envelope, calendar,
+                     quality checks, caches, retries, rate limits, circuit breaker
+  app/features/      indicator library, versioned feature schema, the ONE feature pipeline
+  app/forecast/      dataset, purged walk-forward evaluation, calibration, leakage checks,
+                     promotion rule, model registry, prediction service   (python -m app.forecast)
+  app/predictions/   append-only hash-chained prediction ledger
+  app/accounting/    Decimal money and the portfolio book (cash, positions, P&L)
+  app/backtesting/   bar-by-bar engine on that book; stops/targets move trades AND equity
+  app/paper/         the simulated $50 account (SQLite; no margin, no shorting, no negative cash)
+  app/agent_tools/   15 validated tools, one catalogue for HTTP and MCP
+  app/api/           /api/v2 routes; legacy routes stay in app/main.py
+  mcp_server.py      MCP stdio server (standard newline-delimited transport)
+  scripts/           data snapshots, secret scanner, signal-outcome resolver
+frontend-next/       the terminal-style dashboard (Next.js); quotes come from the backend
+ml/quarantine/       the old v5-v12 models, kept but not loaded (see its README)
+docs/                audit report, implementation plan, methodology, final report
 ```
 
-Install frontend dependencies:
+## Run it
 
-```bash
-python3 -m pip install -r frontend/requirements.txt
-```
-
-Install the premium Next.js UI dependencies:
-
-```bash
-cd frontend-next
-npm install
-```
-
-Start the API from the repository root:
-
-```bash
-uvicorn app.main:app --reload --app-dir backend
-```
-
-In a second terminal, start the dashboard:
-
-```bash
-streamlit run frontend/app.py
-```
-
-Or start the premium MarketVision UI:
-
-```bash
-cd frontend-next
-npm run dev
-```
-
-Open the docs:
-
-- Swagger UI: `http://127.0.0.1:8000/docs`
-- ReDoc: `http://127.0.0.1:8000/redoc`
-- Dashboard: `http://127.0.0.1:8501`
-- Premium UI: `http://127.0.0.1:3000`
-
-## Example Endpoints
-
-- `GET /health`
-- `GET /`
-- `GET /api/stocks/AAPL/overview`
-- `GET /api/stocks/AAPL/analysis`
-- `GET /api/stocks/AAPL/simulation`
-- `GET /api/stocks/AAPL/news`
-- `POST /api/predict`
-- `GET /api/bot/scan`
-- `GET /api/bot/performance`
-- `GET /api/bot/historical-similarity?ticker=NVDA`
-- `POST /api/bot/explain`
-- `POST /api/bot/resolve-outcomes`
-- `GET /api/tools`
-- `POST /api/tools/{tool_name}`
-- `POST /api/stocks/compare`
-- `POST /api/stocks/watchlist`
-- `POST /api/portfolio/analyze`
-
-Example stock comparison request:
-
-```json
-{
-  "tickers": ["AAPL", "MSFT", "NVDA"],
-  "period": "6mo",
-  "interval": "1d"
-}
-```
-
-Example portfolio request:
-
-```json
-{
-  "holdings": [
-    { "ticker": "AAPL", "shares": 10 },
-    { "ticker": "MSFT", "shares": 5 },
-    { "ticker": "NVDA", "shares": 2 }
-  ],
-  "period": "6mo"
-}
-```
-
-Example prediction request:
-
-```json
-{
-  "ticker": "NVDA",
-  "period": "1y",
-  "interval": "1d",
-  "horizon_steps": 12
-}
-```
-
-## Signal Outcome Resolver
-
-MarketVision logs signal-bot outputs to `backend/data/signal_ledger.jsonl`. The resolver evaluates pending paper signals after their prediction window ends and marks each row as:
-
-- `resolved_win`
-- `resolved_loss`
-- `partial_win`
-- `invalid`
-- `still_pending`
-
-Resolution compares actual future high/low/close movement against the recorded entry, stop loss, target 1, and target 2. It is for research and paper-trading analytics only.
-
-Run it manually:
+Python 3.11+ and Node 20+.
 
 ```bash
 cd backend
-python scripts/resolve_signal_outcomes.py
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt          # core; see requirements-{ml,dev,heavy}.txt
+cp .env.example .env                     # add free API keys if you have them (all optional)
+uvicorn app.main:app --reload            # http://127.0.0.1:8000/docs
+
+cd ../frontend-next
+npm ci && npm run dev                    # http://localhost:3000
 ```
 
-Performance is available at `GET /api/bot/performance`, including total predictions, pending/resolved counts, win/loss/partial-win rates, promoted-signal performance, quality-label performance, and confidence-bucket performance.
+Tests (no network is ever contacted; provider code is tested against recorded shapes):
 
-## Confidence Calibration
+```bash
+cd backend && pip install -r requirements-dev.txt && python -m pytest
+```
 
-The performance endpoint reports live calibration buckets:
-
-- `<50%`
-- `50-60%`
-- `60-70%`
-- `70-80%`
-- `80-90%`
-- `90%+`
-
-Each bucket includes coverage count, resolved count, accuracy, win rate, loss rate, partial-win rate, and average risk score. The Next.js UI shows this in the Scanner/Proof area so the project can prove whether model confidence is honest over time.
-
-## Historical Similarity Engine
-
-`GET /api/bot/historical-similarity?ticker=NVDA` compares the current setup against past setups using RSI, MACD, trend strength, volume spike, volatility, VWAP distance, market regime, VIX context, and sector strength where available.
-
-It returns similar historical dates, similarity score, average future return, bullish/bearish/sideways outcome rates, best case, worst case, and average drawdown. The simulation UI shows these as “Similar historical setups found” so the prediction has practical context instead of only a confidence number.
-
-## Monte Carlo Simulation Output
-
-Simulation responses include chart-ready Monte Carlo arrays under `monte_carlo_chart`:
-
-- main predicted path
-- bullish path
-- bearish path
-- sideways path
-- confidence upper/lower band
-- volatility cone p05/p95
-- expected final range
-
-The frontend renders historical candles separately from translucent AI-predicted candles and scenario paths, so users can visually distinguish real market history from probability-based future simulations.
-
-## FRED Macro Intelligence
-
-When `FRED_API_KEY` is configured, MarketVision fetches rates, CPI, unemployment, GDP growth, treasury yields, VIX, and yield-curve data. It converts those inputs into:
-
-- risk-on/risk-off score
-- inflation pressure score
-- rate pressure score
-- recession risk score
-- volatility pressure score
-- macro regime label
-
-Prediction explanations include macro context, for example restrictive rates, inverted yield-curve caution, or risk-off conditions. Macro is an auxiliary risk layer, not a standalone trading signal.
-
-## Intraday VWAP Layer
-
-The advanced engine loads intraday data when available:
-
-- 1-minute
-- 5-minute
-- 15-minute
-- 1-hour
-
-It calculates VWAP, price above/below VWAP, distance from VWAP, VWAP slope, reclaim/rejection state, and intraday volume-curve ratio. This layer is exposed in prediction intelligence and scanner rows without replacing the daily V12 model.
-
-## Scanner Ranking
-
-Scanner rows are ranked by quality label first, then final signal probability, confidence score, lower risk score, risk/reward ratio, historical similarity strength, sentiment score, and macro compatibility.
-
-Failed gates are exposed directly, including `confidence_failed`, `risk_failed`, `sentiment_failed`, `rr_failed`, `insufficient_data`, `macro_conflict`, and `weak_historical_similarity`.
-
-## Explanation Layer
-
-`POST /api/bot/explain` builds a prediction, extracts backend-provided facts, and generates a plain-language explanation. The LLM is only allowed to explain supplied facts; it is not used to invent probabilities, prices, or catalysts. If OpenAI is unavailable, the endpoint returns a deterministic fallback explanation.
-
-Every explanation includes: “This is a probability-based simulation, not financial advice.”
-
-## Execution-Realistic Backtesting
-
-Backtests now include execution assumptions for commission, spread, slippage, max position size, liquidity filtering, stop-loss checks, and target checks. Reports include win rate, profit factor, Sharpe ratio, max drawdown, average reward/risk, false positive rate, invalid trade count, and strategy type.
-
-These are still research fills, not proof of live execution quality.
-
-## Model Drift Monitoring
-
-`GET /api/bot/performance` includes a drift-monitoring block with recent live signal accuracy, high-confidence accuracy, confidence distribution, prediction distribution, feature-drift status, and warnings:
-
-- `model_performance_degraded`
-- `confidence_miscalibrated`
-- `regime_failure_detected`
-- `retraining_recommended`
-
-The drift layer uses resolved signal-ledger outcomes and becomes more useful as more paper signals mature.
-
-## Portfolio Intelligence
-
-Portfolio analysis accepts ticker, share quantity, and optional average cost. It returns total value, sector exposure, correlation risk, volatility risk, concentration risk, portfolio risk score, AI risk summary, unrealized P/L where cost basis is supplied, and suggested watchlist alerts.
-
-## MarketVision Tool Layer
-
-AI agents can call structured JSON tools through:
-
-- `GET /api/tools`
-- `POST /api/tools/{tool_name}`
-
-Available tools:
-
-- `get_live_quote`
-- `get_candles`
-- `calculate_indicators`
-- `predict_market`
-- `predict_market_scenario`
-- `run_scanner`
-- `run_similarity`
-- `run_historical_similarity`
-- `run_monte_carlo`
-- `get_performance`
-- `get_performance_metrics`
-- `explain_prediction`
-- `analyze_portfolio`
-- `get_macro_regime`
-- `get_sentiment`
-- `get_trade_candidates`
-
-If `MARKETVISION_TOOL_TOKEN` is set, `/api/tools` and `/api/agents/*` require `Authorization: Bearer <token>`.
-
-## V13.1 MCP Server + Agent Ecosystem
-
-MarketVision now includes a stdio MCP server at `backend/mcp_server.py`. It exposes MarketVision as an AI-agent tool provider for Claude, Cursor, OpenAI Agents, LangGraph, CrewAI, or any MCP-compatible client.
-
-Run the backend first:
+## The forecasting workflow
 
 ```bash
 cd backend
-uvicorn app.main:app --host 127.0.0.1 --port 8000
+python scripts/build_public_snapshot.py        # pinned public daily bars, 1998-2021 (41 stocks)
+# or, on a machine that can reach Yahoo Finance, build a fresh snapshot of your own universe
+python -m app.forecast snapshots
+python -m app.forecast evaluate --snapshot <id> --stage development   # safe to iterate on
+python -m app.forecast evaluate --snapshot <id>                       # scores the holdout ONCE
+python -m app.forecast list / show <run id> / promote <run id>        # promote refuses a run that failed the rule
 ```
 
-Run the MCP server:
+Method, in one paragraph: complete-row dataset from the single feature pipeline (schema-versioned
+and hashed; a model whose schema hash differs from the running code is refused at serving time);
+chronological walk-forward validation with purging and an embargo so no training label window
+touches a test period; model and settings chosen on validation Brier score; calibration chosen on
+later validation rows; one untouched holdout, scored once, with calendar-week block-bootstrap
+intervals; leakage checks including recomputing sampled rows from past bars alone and a
+shuffled-label control; promotion only under the pre-written rule, otherwise the baseline stays.
+Classification skill is never presented as profitability — that is the backtester's job, with
+costs and equal-terms baselines.
 
-```bash
-cd backend
-MARKETVISION_API_BASE_URL=http://127.0.0.1:8000 python mcp_server.py
-```
+## The $50 virtual account
 
-Optional auth:
+`POST /api/v2/paper/orders` with `{"side": "buy", "symbol": "AAPL", "notional": 5, "simulation": true}`
+(the `simulation: true` acknowledgement is required). Market orders, fractional shares,
+configurable spread/slippage/commission, stale-quote and closed-market rejection, position and
+exposure caps, a pause switch, idempotent `client_order_id`, and a reset that archives history.
+Balances are computed by replaying fills through the Decimal accounting book; the arithmetic is
+code, never a language model.
 
-```bash
-export MARKETVISION_TOOL_TOKEN=your-local-tool-token
-export MARKETVISION_API_TOKEN=your-local-tool-token
-```
+## Agent interfaces
 
-Example MCP client config:
+Fifteen validated tools (schemas at `GET /api/v2/tools`) serve both the HTTP API and the MCP
+server. Research tools are read-only; `submit_paper_order` requires `simulation: true` and the
+admin scope. MCP client config:
 
 ```json
-{
-  "mcpServers": {
-    "marketvision-ai": {
-      "command": "python",
-      "args": ["/absolute/path/to/backend/mcp_server.py"],
-      "env": {
-        "MARKETVISION_API_BASE_URL": "http://127.0.0.1:8000",
-        "MARKETVISION_API_TOKEN": ""
-      }
-    }
-  }
-}
+{"mcpServers": {"marketvision": {"command": "python", "args": ["/path/to/backend/mcp_server.py"]}}}
 ```
 
-Core MCP tools for agents:
+The `autonomous-ai` project is **not** connected; these interfaces are what it would use later.
 
-- `predict_market`: compact probabilities, confidence, risk, quality label, and trade plan
-- `run_scanner`: ranked scanner over custom or predefined universes
-- `run_similarity`: compact historical similarity score and outcome probabilities
-- `run_monte_carlo`: chart-ready future path arrays and confidence bands
-- `analyze_portfolio`: portfolio value, exposure, correlation, and risk intelligence
-- `explain_prediction`: fact-grounded explanation text
-- `get_performance`: signal ledger, calibration, and drift metrics
-- `get_macro_regime`: FRED-backed macro regime scores
-- `get_sentiment`: recent news sentiment for a ticker
-- `get_trade_candidates`: top ranked/promoted trade candidates
+## Security
 
-The backend also exposes an agent orchestration endpoint:
+See [SECURITY.md](SECURITY.md) — including the step the owner must take: **rotate the Finnhub key**
+that an earlier version committed to this repository.
 
-```bash
-curl -X POST http://127.0.0.1:8000/api/agents/trade-candidates \
-  -H "Content-Type: application/json" \
-  -d '{"prompt":"Find today'\''s best trade candidates","universe":"mega_cap_ai","max_candidates":5}'
-```
+## Documentation
 
-The agent flow runs:
-
-- Technical Agent: prediction, RSI/MACD/VWAP/trend/volume context
-- Sentiment Agent: news sentiment and macro compatibility flags
-- Macro Agent: FRED-backed macro regime
-- Risk Agent: risk score, failed gates, risk/reward
-- Simulation Agent: historical similarity and Monte Carlo context
-- Judge Agent: final candidate decision and quality score
-
-Frontend Copilot includes a “RUN AGENTS” / “FIND BEST SETUPS” action that calls the same orchestration endpoint and shows the tool trace plus Judge Agent candidate scores.
-
-## Render Backend Deployment
-
-The production-friendly sharing setup is:
-
-```text
-Vercel frontend -> Render FastAPI backend -> MarketVision V12 model/services
-```
-
-This repo includes `render.yaml` for a Render Blueprint deployment. It uses `backend/requirements-render.txt`, which intentionally excludes `torch` and `transformers` so the free Render build can run the backend and V12 model without pulling the heavy FinBERT stack. Sentiment still works through the existing VADER fallback, and FinBERT can be re-enabled later on a larger paid instance by using `backend/requirements.txt` and setting `MARKETVISION_ENABLE_FINBERT=1`.
-
-Deploy backend on Render:
-
-1. Push this repo to GitHub.
-2. In Render, choose **New +** -> **Blueprint**.
-3. Select `manit0700/ai-stock-analysis-portfolio`.
-4. Render should detect `render.yaml`.
-5. Add any API keys you have:
-   - `FINNHUB_API_KEY`
-   - `OPENAI_API_KEY`
-   - `FRED_API_KEY`
-   - `NEWSAPI_KEY`
-   - optional `MARKETVISION_TOOL_TOKEN`
-6. Deploy the `marketvision-ai-backend` service.
-7. Confirm the backend is live:
-
-```bash
-curl https://YOUR-RENDER-SERVICE.onrender.com/health
-```
-
-Then point Vercel at the Render backend:
-
-```bash
-cd frontend-next
-vercel env rm NEXT_PUBLIC_API_BASE_URL production
-vercel env add NEXT_PUBLIC_API_BASE_URL production
-# paste: https://YOUR-RENDER-SERVICE.onrender.com
-vercel --prod
-```
-
-If `MARKETVISION_TOOL_TOKEN` is set on Render, also configure the same token wherever an AI agent or MCP client calls `/api/tools` or `/api/agents/*`.
-
-## Product Direction
-
-The real-world version of this project should stay focused on decision support:
-
-- explain stock trends in plain language
-- highlight portfolio concentration and volatility
-- compare holdings instead of promising winners
-- simulate multiple future paths instead of one guaranteed forecast
-- train ML models on historical OHLCV, indicators, sentiment, and macro features
-- auto-tune model baselines locally or on Kaggle GPU using `ml/train_autotune.py`
-- use LLMs such as OpenAI/Grok/Claude for explanation, not as the only prediction engine
-- provide useful research context without crossing into personalized investment advice
-
-## Current Platform Capabilities
-
-MarketVision AI currently analyzes tickers with market data, technical indicators, intraday VWAP context, macro regime scores, sentiment, historical similarity, Monte Carlo paths, confidence/risk scoring, and a signal-promotion layer.
-
-Data used today:
-
-- OHLCV candles from market-data providers
-- live quotes where configured
-- FRED macro indicators
-- Finnhub/NewsAPI headlines where configured
-- FinBERT sentiment when available
-- V12 model artifacts and auxiliary policy outputs
-- local signal ledger outcomes
-
-Outputs generated:
-
-- bullish/bearish/sideways probabilities
-- confidence score
-- risk score
-- quality label
-- failed gates
-- predicted candles
-- Monte Carlo scenario paths
-- historical similarity outcomes
-- LLM explanation facts and explanation text
-- portfolio risk intelligence
-- calibration and drift metrics
-
-Signal promotion:
-
-Every ticker can receive a probability-based simulation. Only stronger setups are promoted into `high_confidence_trade_candidate`; weaker outputs remain `watchlist_candidate`, `prediction_only`, `avoid_high_risk`, or `insufficient_data`.
-
-Calibration:
-
-The platform tracks confidence buckets and resolved outcomes so confidence can be compared against realized paper-signal results over time.
-
-Historical similarity:
-
-The engine compares the current setup to past setups using technical, volatility, volume, VWAP, regime, sector, and sentiment-style features. It reports similar dates, average future return, bullish/bearish/sideways outcomes, best case, worst case, and drawdown.
-
-Monte Carlo simulation:
-
-The simulation engine returns main, bullish, bearish, sideways, confidence-band, and volatility-cone arrays for chart visualization. These are simulations, not guaranteed forecasts.
-
-Performance tracking:
-
-The signal ledger records paper signals, resolves outcomes after the prediction window, tracks promoted-signal performance, and reports drift warnings when enough resolved data exists.
-
-Still missing or partial:
-
-- true options flow and dark-pool data
-- real SEC filing/13F/insider ingestion
-- full social sentiment from Reddit/X
-- advanced sequence models in production serving
-- live brokerage execution
-- hosted production MCP gateway; current MCP server is a local stdio server backed by the FastAPI API
-
-All outputs must be framed as: “Probability-based market simulations and AI-generated financial intelligence, not financial advice.”
-
-## Current Workflow
-
-1. Run the FastAPI backend
-2. Open the Streamlit dashboard
-3. Research a single stock with charts, signals, and news
-4. Run a future chart simulation with scenario probabilities
-5. Rank a watchlist of candidate stocks
-6. Compare several tickers side by side
-7. Analyze portfolio concentration, volatility, and correlations
-
-## Repository Link
-
-GitHub: https://github.com/manit0700/ai-stock-analysis-portfolio
+- [docs/AUDIT_REPORT.md](docs/AUDIT_REPORT.md) — what was wrong, with how each fault was confirmed
+- [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) — the repair plan and its done-tests
+- [docs/FINAL_REPORT.md](docs/FINAL_REPORT.md) — what was repaired, measured results, what remains
+- [docs/OPERATIONS.md](docs/OPERATIONS.md) — free-tier deployment and the (not enabled) scheduled jobs

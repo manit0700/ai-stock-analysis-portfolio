@@ -21,8 +21,8 @@ def test_secret_never_prints_its_value() -> None:
 def test_redact_removes_registered_values_and_key_parameters() -> None:
     Secret("fred_key_SUPERSECRET_42")
     text = (
-        "404 Client Error for url: https://api.stlouisfed.org/fred/series?series_id=DGS10&api_key=fred_key_SUPERSECRET_42 "
-        "and https://finnhub.io/api/v1/quote?symbol=AAPL&token=abc123def456 and apiKey=zzz999 "
+        "404 Client Error for url: https://api.stlouisfed.org/fred/series?series_id=DGS10&api_key=fred_key_SUPERSECRET_42 "  # not-a-secret (test fixture)
+        "and https://finnhub.io/api/v1/quote?symbol=AAPL&token=abc123def456 and apiKey=zzz999 "  # not-a-secret (test fixture)
         "Authorization: Bearer tok_live_1234567890"
     )
     cleaned = redact(text)
@@ -36,9 +36,9 @@ def test_log_filter_scrubs_messages_arguments_and_tracebacks(caplog) -> None:
     logger = logging.getLogger("marketvision.test.redaction")
     logger.addFilter(RedactingFilter())
     with caplog.at_level(logging.WARNING, logger=logger.name):
-        logger.warning("NewsAPI %s failed: %s", "/everything", "HTTPError for url: https://newsapi.org/v2/everything?q=x&apiKey=news_key_TOPSECRET_77")
+        logger.warning("NewsAPI %s failed: %s", "/everything", "HTTPError for url: https://newsapi.org/v2/everything?q=x&apiKey=news_key_TOPSECRET_77")  # not-a-secret (test fixture)
         try:
-            raise RuntimeError("boom https://finnhub.io/api/v1/quote?token=news_key_TOPSECRET_77")
+            raise RuntimeError("boom https://finnhub.io/api/v1/quote?token=news_key_TOPSECRET_77")  # not-a-secret (test fixture)
         except RuntimeError:
             logger.exception("request failed")
     text = "\n".join(record.getMessage() + (record.exc_text or "") for record in caplog.records)
