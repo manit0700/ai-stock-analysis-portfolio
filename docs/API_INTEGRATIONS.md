@@ -137,7 +137,7 @@ manual-only, prints no secret values and places no orders.
   - the probe route's auth scope.
 
   All use stand-in HTTP sessions: **they show the code is correct, not that any provider works.**
-- **Secret scan:** clean. Frontend bundle scan (inside the suite): clean.
+- **Secret scan:** clean after a fix. *Correction:* the first scan ran before the new test file was tracked, so it missed two fake test keys (`sk-...` placeholders in `tests/test_api_integrations.py`) that the scanner flags and CI would fail on. A check on the owner's Mac caught them on 2026-10-10. They now carry the scanner's `not-a-secret` marker, and a rescan of the tracked files is clean. Frontend bundle scan (inside the suite): clean.
 - **Live provider check on the owner's Mac** (2026-10-10 03:07 UTC, after the close; exit code 0):
 
   | Check | Outcome | ms | Freshness | Market time (UTC) | Result |

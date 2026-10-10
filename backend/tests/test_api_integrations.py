@@ -261,7 +261,7 @@ def test_copilot_uses_the_configured_local_server_and_model(settings_env, fake_o
 
 
 def test_copilot_omits_temperature_for_claudes_openai_compatible_endpoint(settings_env, fake_openai) -> None:
-    settings_env(MARKETVISION_LLM_BASE_URL="https://api.anthropic.com/v1/", MARKETVISION_LLM_API_KEY="sk-ant-test-not-real-000000", MARKETVISION_LLM_MODEL="claude-sonnet-5-5")
+    settings_env(MARKETVISION_LLM_BASE_URL="https://api.anthropic.com/v1/", MARKETVISION_LLM_API_KEY="sk-ant-test-not-real-000000", MARKETVISION_LLM_MODEL="claude-sonnet-5-5")  # not-a-secret: test placeholder
     from app.services.copilot_service import CopilotService
 
     CopilotService().chat("hi")
@@ -269,7 +269,7 @@ def test_copilot_omits_temperature_for_claudes_openai_compatible_endpoint(settin
 
 
 def test_copilot_error_text_never_reaches_the_caller(settings_env, fake_openai) -> None:
-    settings_env(MARKETVISION_LLM_API_KEY="sk-test-secret-value-123456", MARKETVISION_LLM_BASE_URL=None)
+    settings_env(MARKETVISION_LLM_API_KEY="sk-test-secret-value-123456", MARKETVISION_LLM_BASE_URL=None)  # not-a-secret: test placeholder
     from app.services.copilot_service import CopilotService
 
     fake_openai.fail = True
