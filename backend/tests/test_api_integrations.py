@@ -336,3 +336,35 @@ def test_provider_probe_route_needs_the_read_scope_when_tokens_are_set(settings_
     assert client.get("/api/v2/health/providers").status_code == 401
     answer = client.get("/api/v2/health/providers", headers={"Authorization": "Bearer read-token-abcdef"})
     assert answer.status_code == 200 and answer.json() == {"live": True, "checks": [], "include_llm": False}
+
+
+# ---------------------------------------------------------------- overview cards
+def test_overview_cards_name_the_etf_they_show_and_measure_every_label(settings_env) -> None:
+    from tests.helpers import make_ohlcv
+    from app.services.market import MarketDataService as MarketService
+
+    frame = make_ohlcv(60, start="2026-08-03")
+    frame = frame[frame.index <= pd.Timestamp("2026-10-08")]
+    set_market_data(MarketData([FakeProvider("yahoo", {"history"}, history=frame)], clock=lambda: NOW, sleep=lambda s: None))
+    try:
+        overview = MarketService().get_market_overview()
+    finally:
+        set_market_data(None)
+    names = [c["name"] for c in overview["cards"]]
+    assert "S&P 500 ETF (SPY)" in names and "S&P 500" not in names
+    assert "Dow Jones ETF (DIA)" in names and "ETF" in overview["note"]
+    for card in overview["cards"]:
+        assert card["volatility"] in {"Small move", "Medium move", "Large move"}  # measured, never a fixed word
+        assert card["as_of"] and card["source"] == "yahoo"
+    sector = next(c for c in overview["cards"] if c["name"] == "Top Sector Today")
+    assert sector["symbol"] in {"XLK", "XLF", "XLE", "XLV", "XLI", "XLY"}
+
+
+def test_overview_leaves_out_cards_it_has_no_data_for(settings_env) -> None:
+    from app.services.market import MarketDataService as MarketService
+
+    set_market_data(MarketData([FakeProvider("yahoo", {"history"}, fail=ProviderError("down", details={"provider": "yahoo"}))], sleep=lambda s: None))
+    try:
+        assert MarketService().get_market_overview()["cards"] == []
+    finally:
+        set_market_data(None)

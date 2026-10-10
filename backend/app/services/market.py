@@ -277,75 +277,100 @@ class MarketDataService:
             raise HTTPException(status_code=exc.http_status, detail=exc.message) from None
 
     def get_market_overview(self) -> dict[str, Any]:
+        """Overview cards. Each card names the instrument it actually shows.
+
+        SPY, QQQ and DIA are exchange-traded funds that track the S&P 500, Nasdaq-100 and Dow
+        Jones; their prices are not index levels, so the card says which fund it is. "Up/Down
+        today" describes one session's move, nothing more. Data comes through the unified data
+        layer (cached, with provenance); a card whose data is unavailable is left out, not filled.
+        """
+        from app.core.errors import MarketVisionError
+        from app.marketdata.service import get_market_data
+
         MARKET_SYMBOLS = {
-            "S&P 500": "SPY",
-            "Nasdaq": "QQQ",
-            "Dow Jones": "DIA",
-            "Bitcoin": "BTC-USD",
+            "S&P 500 ETF (SPY)": "SPY",
+            "Nasdaq-100 ETF (QQQ)": "QQQ",
+            "Dow Jones ETF (DIA)": "DIA",
+            "Bitcoin (BTC-USD)": "BTC-USD",
             "VIX": "^VIX",
         }
         SECTOR_ETFS = {
             "Tech": "XLK", "Financials": "XLF", "Energy": "XLE",
             "Healthcare": "XLV", "Industrials": "XLI", "Consumer": "XLY",
         }
+        md = get_market_data()
+
+        def closes(sym: str) -> tuple[pd.Series, Any, str] | None:
+            try:
+                envelope = md.history(sym, period="10d", interval="1d")
+            except MarketVisionError:
+                return None
+            series = envelope.data["Close"].dropna() if "Close" in envelope.data else pd.Series(dtype=float)
+            if len(series) < 2:
+                return None
+            return series, envelope.market_timestamp, envelope.provider
+
+        def day_move(change_pct: float) -> str:
+            return "Up today" if change_pct > 0.3 else ("Down today" if change_pct < -0.3 else "Flat today")
+
+        def move_size(change_pct: float) -> str:
+            return "Large move" if abs(change_pct) > 1.5 else ("Medium move" if abs(change_pct) > 0.5 else "Small move")
 
         cards = []
         for label, sym in MARKET_SYMBOLS.items():
-            try:
-                hist = yf.Ticker(sym).history(period="5d", interval="1d", auto_adjust=False)
-                hist = hist.dropna(subset=["Close"])
-                if hist.empty:
-                    continue
-                price = float(hist["Close"].iloc[-1])
-                prev = float(hist["Close"].iloc[-2]) if len(hist) > 1 else price
-                change_pct = round((price / prev - 1) * 100, 2) if prev else 0.0
-                points = [round(float(p), 2) for p in hist["Close"].tail(8).tolist()]
-                trend = "Bullish" if change_pct > 0.3 else ("Bearish" if change_pct < -0.3 else "Neutral")
-                if sym == "^VIX":
-                    trend = "Risk-On" if price < 20 else ("Fear" if price > 30 else "Caution")
-                if sym == "BTC-USD":
-                    label_display = f"${price:,.0f}"
-                elif sym == "^VIX":
-                    label_display = f"{price:.2f}"
-                else:
-                    label_display = f"{price:,.2f}"
-                cards.append({
-                    "name": label,
-                    "value": label_display,
-                    "change": f"+{change_pct}%" if change_pct >= 0 else f"{change_pct}%",
-                    "trend": trend,
-                    "volatility": "High" if abs(change_pct) > 1.5 else ("Medium" if abs(change_pct) > 0.5 else "Low"),
-                    "points": points,
-                })
-            except Exception:
+            got = closes(sym)
+            if got is None:
                 continue
-
-        # top performing sector
-        best_sector = None
-        best_change = -999.0
-        for sector, sym in SECTOR_ETFS.items():
-            try:
-                hist = yf.Ticker(sym).history(period="5d", interval="1d", auto_adjust=False).dropna(subset=["Close"])
-                if len(hist) < 2:
-                    continue
-                chg = float((hist["Close"].iloc[-1] / hist["Close"].iloc[-2] - 1) * 100)
-                if chg > best_change:
-                    best_change = chg
-                    best_sector = sector
-            except Exception:
-                continue
-
-        if best_sector:
+            series, market_ts, provider = got
+            price, prev = float(series.iloc[-1]), float(series.iloc[-2])
+            change_pct = round((price / prev - 1) * 100, 2) if prev else 0.0
+            if sym == "^VIX":
+                trend = "Low fear" if price < 20 else ("High fear" if price > 30 else "Elevated")
+                value = f"{price:.2f}"
+            else:
+                trend = day_move(change_pct)
+                value = f"${price:,.0f}" if sym == "BTC-USD" else f"${price:,.2f}"
             cards.append({
-                "name": "Top Sector",
-                "value": best_sector,
-                "change": f"+{round(best_change, 2)}%" if best_change >= 0 else f"{round(best_change, 2)}%",
-                "trend": "Leader",
-                "volatility": "Medium",
-                "points": [],
+                "name": label,
+                "symbol": sym,
+                "value": value,
+                "change": f"+{change_pct}%" if change_pct >= 0 else f"{change_pct}%",
+                "trend": trend,
+                "volatility": move_size(change_pct),
+                "points": [round(float(v), 2) for v in series.tail(8).tolist()],
+                "as_of": series.index[-1].date().isoformat(),
+                "market_timestamp": market_ts.isoformat() if market_ts else None,
+                "source": provider,
             })
 
-        return {"cards": cards, "as_of": datetime.now(timezone.utc).isoformat()}
+        best: tuple[str, str, float, str, str] | None = None
+        for sector, sym in SECTOR_ETFS.items():
+            got = closes(sym)
+            if got is None:
+                continue
+            series, _, provider = got
+            chg = float((series.iloc[-1] / series.iloc[-2] - 1) * 100)
+            if best is None or chg > best[2]:
+                best = (sector, sym, chg, series.index[-1].date().isoformat(), provider)
+        if best:
+            sector, sym, chg, as_of, provider = best
+            cards.append({
+                "name": "Top Sector Today",
+                "symbol": sym,
+                "value": sector,
+                "change": f"+{round(chg, 2)}%" if chg >= 0 else f"{round(chg, 2)}%",
+                "trend": f"Best of 6 sector ETFs ({sym})",
+                "volatility": move_size(chg),
+                "points": [],
+                "as_of": as_of,
+                "source": provider,
+            })
+
+        return {
+            "cards": cards,
+            "as_of": datetime.now(timezone.utc).isoformat(),
+            "note": "SPY, QQQ and DIA are ETFs tracking the indices; their prices are not index levels. Moves are one session.",
+        }
 
     def build_watchlist(self, tickers: list[str], period: str = "6mo", interval: str = "1d") -> dict[str, Any]:
         comparison = self.compare_stocks(tickers=tickers, period=period, interval=interval)
