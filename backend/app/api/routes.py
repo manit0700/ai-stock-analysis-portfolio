@@ -149,4 +149,17 @@ def health() -> dict[str, Any]:
         "capabilities": settings.capabilities(),
         "forecast": get_prediction_service().status(),
         "banner": "SIMULATED TRADING — NO REAL MONEY",
+        "note": "capabilities show what is configured; /api/v2/health/providers checks what actually answers.",
     }
+
+
+@router.get("/health/providers", dependencies=[Depends(require_read), Depends(rate_limit("provider_probe", 4))])
+def health_providers() -> dict[str, Any]:
+    """Make one small live request per provider and report the outcome. No secrets are returned.
+
+    The language model is not called here (a hosted model may charge); use
+    ``scripts/check_providers.py --include-llm`` for that.
+    """
+    from app.marketdata.probe import probe_providers
+
+    return probe_providers(include_llm=False)

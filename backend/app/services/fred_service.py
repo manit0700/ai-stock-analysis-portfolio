@@ -1,23 +1,24 @@
+"""FRED macro indicators and scores for the older dashboard routes.
+
+Observations come from the unified data layer (``MarketData.economic_series``): the FRED JSON API
+when ``FRED_API_KEY`` is set, FRED's public CSV download otherwise, cached for six hours and
+sharing one request budget with everything else. Missing observations (FRED's ".") are dropped,
+never filled in.
+"""
 from __future__ import annotations
 
 import logging
-import os
-import time
-from pathlib import Path
+from datetime import timedelta
 from typing import Any
 
-import requests
-from dotenv import load_dotenv
-
-load_dotenv(Path(__file__).resolve().parents[2] / ".env")
+from app.core.clock import utcnow
+from app.core.config import get_settings
+from app.core.errors import MarketVisionError
 
 log = logging.getLogger(__name__)
 
-_API_KEY = os.getenv("FRED_API_KEY", "")
-_BASE = "https://api.stlouisfed.org/fred"
-_TIMEOUT = 4
-_CACHE_TTL_SECONDS = 900
-_SERIES_CACHE: dict[tuple[str, int], tuple[float, list[dict] | None]] = {}
+#: How far back observations are requested. Long enough for every series here, small to fetch.
+_LOOKBACK_DAYS = 5 * 366
 
 # Series IDs for key macro indicators
 _SERIES = {
@@ -35,35 +36,20 @@ _SERIES = {
 
 
 def _get_series(series_id: str, limit: int = 2) -> list[dict] | None:
-    if not _API_KEY:
-        return None
-    cache_key = (series_id, limit)
-    cached = _SERIES_CACHE.get(cache_key)
-    now = time.time()
-    if cached and now - cached[0] <= _CACHE_TTL_SECONDS:
-        return cached[1]
+    """The latest ``limit`` observations, newest first, as ``{"date", "value"}``. ``None`` if unavailable."""
+    from app.marketdata.service import get_market_data
+
+    start = (utcnow() - timedelta(days=_LOOKBACK_DAYS)).date()
     try:
-        r = requests.get(
-            f"{_BASE}/series/observations",
-            params={
-                "series_id": series_id,
-                "api_key": _API_KEY,
-                "file_type": "json",
-                "sort_order": "desc",
-                "limit": limit,
-            },
-            timeout=_TIMEOUT,
-        )
-        r.raise_for_status()
-        data = r.json()
-        obs = data.get("observations", [])
-        result = [o for o in obs if o.get("value") != "."]
-        _SERIES_CACHE[cache_key] = (now, result)
-        return result
-    except Exception as exc:
-        log.warning("FRED %s failed: %s", series_id, exc)
-        _SERIES_CACHE[cache_key] = (now, None)
+        envelope = get_market_data().economic_series(series_id, start=start)
+    except MarketVisionError as exc:
+        log.warning("FRED %s unavailable: %s", series_id, exc.message)
         return None
+    series = envelope.data.dropna()
+    if series.empty:
+        return None
+    tail = series.iloc[-max(int(limit), 1):][::-1]
+    return [{"date": stamp.date().isoformat(), "value": float(value)} for stamp, value in tail.items()]
 
 
 def _latest_value(series_id: str) -> float | None:
@@ -106,7 +92,8 @@ def _clamp_score(value: float) -> int:
 
 class FredService:
     def is_available(self) -> bool:
-        return bool(_API_KEY)
+        """FRED works without a key (public CSV); only offline mode switches it off."""
+        return not get_settings().offline
 
     def get_macro_snapshot(self) -> dict[str, Any]:
         """Fetch latest readings for all key macro indicators."""
@@ -137,6 +124,17 @@ class FredService:
 
     def get_macro_intelligence(self) -> dict[str, Any]:
         indicators = self.get_macro_snapshot()
+        missing = sorted(name for name, row in indicators.items() if isinstance(row, dict) and "trend" in row and row.get("value") is None)
+        if all(
+            (indicators.get(name) or {}).get("value") is None
+            for name in ("fed_funds_rate", "cpi_inflation", "unemployment", "10y_treasury", "vix")
+        ):
+            return {
+                "available": False,
+                "source": "fred",
+                "message": "No FRED observations could be fetched, so no macro scores are shown (nothing is assumed).",
+                "missing_indicators": missing,
+            }
         fed = (indicators.get("fed_funds_rate") or {}).get("value")
         cpi = (indicators.get("cpi_inflation") or {}).get("value")
         cpi_prev = (indicators.get("cpi_inflation") or {}).get("previous")
@@ -186,6 +184,8 @@ class FredService:
             "available": True,
             "source": "fred",
             "indicators": indicators,
+            # Scores treat a missing input as neutral; these names say which inputs were missing.
+            "missing_indicators": missing,
             "scores": {
                 "risk_on_score": risk_on_score,
                 "inflation_pressure_score": inflation_pressure,
@@ -255,7 +255,9 @@ class FredService:
             flags.append(f"Unemployment: {unemp}%")
 
         overall = "uncertain"
-        if len(risks) == 0:
+        if all(v is None for v in (fed, cpi, unemp, t10, t2, vix)):
+            overall = "unavailable"  # no data is not good news
+        elif len(risks) == 0:
             overall = "positive"
         elif len(risks) >= 2:
             overall = "cautious"

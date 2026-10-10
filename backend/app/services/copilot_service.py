@@ -1,19 +1,31 @@
+"""The AI copilot: plain-language explanations of numbers the application has already computed.
+
+Any OpenAI-compatible chat server works, configured only through the environment:
+
+    MARKETVISION_LLM_BASE_URL   e.g. http://127.0.0.1:8089/v1 for a free local model
+                                (empty = OpenAI's own endpoint)
+    MARKETVISION_LLM_API_KEY    the server's key (OPENAI_API_KEY is also read); a local server
+                                usually needs none
+    MARKETVISION_LLM_MODEL      the model name that server expects
+
+Nothing is enabled by default and no paid service is called unless the owner configures one.
+The model explains; it never supplies prices, balances, trades or returns, and the arithmetic
+stays in code. Errors returned to the browser are generic: the raw exception text is logged
+(through the redacting filter), not sent.
+"""
 from __future__ import annotations
 
-import logging
-import os
 import json
-from pathlib import Path
+import logging
 from typing import Any
+from urllib.parse import urlsplit
 
-from dotenv import load_dotenv
-
-load_dotenv(Path(__file__).resolve().parents[2] / ".env")
+from app.core.config import get_settings
 
 log = logging.getLogger(__name__)
 
-_API_KEY = os.getenv("OPENAI_API_KEY", "")
-_MODEL = "gpt-4o-mini"
+#: Sent instead of a key to local servers that need none; such servers ignore it.
+_NO_KEY_PLACEHOLDER = "no-key-required"
 
 SYSTEM_PROMPT = """You are MarketVision AI Copilot — a financial intelligence assistant built into a stock analysis platform.
 
@@ -28,22 +40,50 @@ Rules:
 - Be concise — 2-4 sentences per answer unless a detailed breakdown is requested
 - Use real numbers from the context provided
 - Speak like a smart analyst, not a chatbot
+- Every number you state must appear in the context you were given. If a price, balance, trade,
+  return or probability is not in that context, say it is not available. Never state one from memory.
+- Trading in this application is simulated with virtual money; never suggest real-money orders.
 """
 
 
 class CopilotService:
     def __init__(self) -> None:
+        settings = get_settings()
         self._client = None
-        if _API_KEY:
-            try:
-                from openai import OpenAI
-                self._client = OpenAI(api_key=_API_KEY)
-                log.info("OpenAI Copilot ready (model=%s)", _MODEL)
-            except Exception as exc:
-                log.warning("OpenAI init failed: %s", exc)
+        self._model = settings.llm_model
+        self._base_url = settings.llm_base_url
+        host = (urlsplit(self._base_url).hostname or "") if self._base_url else ""
+        # Claude's OpenAI-compatible endpoint rejects a temperature below 1 on recent models.
+        self._send_temperature = not host.endswith("anthropic.com")
+        self.status_reason = ""
+        if not (settings.llm_api_key or settings.llm_base_url):
+            self.status_reason = "No language model is configured (MARKETVISION_LLM_BASE_URL or MARKETVISION_LLM_API_KEY)."
+            return
+        try:
+            from openai import OpenAI
+        except ImportError:
+            self.status_reason = "The openai client package is not installed (pip install -r requirements-heavy.txt)."
+            log.warning("Copilot disabled: %s", self.status_reason)
+            return
+        try:
+            self._client = OpenAI(
+                api_key=settings.llm_api_key.get() or _NO_KEY_PLACEHOLDER,
+                base_url=self._base_url or None,
+                timeout=30.0,
+                max_retries=1,
+            )
+        except Exception as exc:  # noqa: BLE001 - the client raises several types on bad config
+            self.status_reason = f"The language-model client could not start ({type(exc).__name__})."
+            log.warning("Copilot init failed: %s", exc)
+            return
+        log.info("Copilot ready (model=%s, endpoint=%s)", self._model, host or "api.openai.com")
 
     def is_available(self) -> bool:
         return self._client is not None
+
+    @property
+    def model(self) -> str:
+        return self._model
 
     def chat(
         self,
@@ -52,7 +92,7 @@ class CopilotService:
         history: list[dict[str, str]] | None = None,
     ) -> str:
         if not self.is_available():
-            return "AI Copilot is not available — OpenAI API key not configured."
+            return f"AI Copilot is not available. {self.status_reason}".strip()
 
         messages: list[dict[str, str]] = [{"role": "system", "content": SYSTEM_PROMPT}]
 
@@ -65,17 +105,16 @@ class CopilotService:
 
         messages.append({"role": "user", "content": message})
 
+        request: dict[str, Any] = {"model": self._model, "messages": messages, "max_tokens": 400}
+        if self._send_temperature:
+            request["temperature"] = 0.4
         try:
-            response = self._client.chat.completions.create(
-                model=_MODEL,
-                messages=messages,
-                max_tokens=400,
-                temperature=0.4,
-            )
-            return response.choices[0].message.content.strip()
-        except Exception as exc:
+            response = self._client.chat.completions.create(**request)
+            content = response.choices[0].message.content or ""
+            return content.strip() or "The language model returned an empty answer."
+        except Exception as exc:  # noqa: BLE001 - network, auth, quota and model errors all land here
             log.warning("Copilot chat failed: %s", exc)
-            return f"Copilot error: {exc}"
+            return f"The language model could not answer ({type(exc).__name__}). Nothing was generated."
 
     def explain_simulation(self, simulation: dict[str, Any]) -> str:
         prompt = (
@@ -115,7 +154,7 @@ class CopilotService:
             explanation = explanation.rstrip() + "\n\nThis is a probability-based simulation, not financial advice."
         return {
             "available": True,
-            "model": _MODEL,
+            "model": self._model,
             "explanation": explanation,
             "facts_used": facts,
             "disclaimer": "This is a probability-based simulation, not financial advice.",

@@ -51,6 +51,9 @@ class Settings:
     finnhub_api_key: Secret
     fred_api_key: Secret
     newsapi_key: Secret
+    #: NewsAPI's free Developer plan may not be used in staging or production. Set
+    #: MARKETVISION_NEWSAPI_PAID_PLAN=1 only if the key belongs to a paid plan.
+    newsapi_paid_plan: bool
     llm_api_key: Secret
     llm_base_url: str
     llm_model: str
@@ -81,13 +84,28 @@ class Settings:
     def database_path(self) -> Path:
         return self.data_dir / "marketvision.sqlite3"
 
+    @property
+    def newsapi_blocked_reason(self) -> str:
+        """Why NewsAPI must not be used in this environment, or an empty string."""
+        if self.env in {"production", "staging"} and not self.newsapi_paid_plan:
+            return (
+                "NewsAPI's free Developer plan may not be used in staging or production. "
+                "Set MARKETVISION_NEWSAPI_PAID_PLAN=1 only if this key is on a paid plan."
+            )
+        return ""
+
     def capabilities(self) -> dict[str, bool]:
-        """What this process can do with the configuration it has. Shown by ``/health``."""
+        """What this process is *configured* to do. Shown by ``/health``.
+
+        Configured is not the same as working: ``/api/v2/health/providers`` and
+        ``scripts/check_providers.py`` make real calls and report what actually answered.
+        """
         return {
             "network_providers": not self.offline,
             "finnhub": bool(self.finnhub_api_key) and not self.offline,
             "fred_api": bool(self.fred_api_key) and not self.offline,
-            "newsapi": bool(self.newsapi_key) and not self.offline,
+            "fred_public_csv": not self.offline,
+            "newsapi": bool(self.newsapi_key) and not self.offline and not self.newsapi_blocked_reason,
             "llm_explanations": bool(self.llm_api_key) or bool(self.llm_base_url),
             "finbert": self.enable_finbert,
             "paper_trading": self.paper_trading_enabled,
@@ -118,6 +136,7 @@ def get_settings() -> Settings:
         finnhub_api_key=Secret(os.getenv("FINNHUB_API_KEY")),
         fred_api_key=Secret(os.getenv("FRED_API_KEY")),
         newsapi_key=Secret(os.getenv("NEWSAPI_KEY")),
+        newsapi_paid_plan=_flag("MARKETVISION_NEWSAPI_PAID_PLAN", False),
         # Any OpenAI-compatible server works, including a local one. No provider is hard-coded.
         llm_api_key=Secret(os.getenv("MARKETVISION_LLM_API_KEY") or os.getenv("OPENAI_API_KEY")),
         llm_base_url=(os.getenv("MARKETVISION_LLM_BASE_URL", "") or "").strip(),

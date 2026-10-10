@@ -1,22 +1,54 @@
+"""NewsAPI for the older dashboard routes, with VADER sentiment on each headline.
+
+Shares the process-wide NewsAPI client (key in the ``X-Api-Key`` header, one 100-a-day budget
+with the v2 data layer) and caches answers for ten minutes. In staging or production it stays
+off unless the owner declares a paid plan, because the free Developer plan forbids that use.
+"""
 from __future__ import annotations
 
+import json
 import logging
-import os
-from pathlib import Path
 from typing import Any
 
-import requests
-from dotenv import load_dotenv
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
-load_dotenv(Path(__file__).resolve().parents[2] / ".env")
+from app.core.config import get_settings
+from app.core.errors import MarketVisionError
+from app.marketdata.cache import TTLCache
+from app.marketdata.clients import shared_client
 
 log = logging.getLogger(__name__)
 
-_API_KEY = os.getenv("NEWSAPI_KEY", "")
 _BASE = "https://newsapi.org/v2"
-_TIMEOUT = 10
+_TTL_SECONDS = 600.0
 _analyzer = SentimentIntensityAnalyzer()
+_CACHE = TTLCache(maxsize=128)
+
+
+def _configured() -> bool:
+    settings = get_settings()
+    return bool(settings.newsapi_key) and not settings.offline and not settings.newsapi_blocked_reason
+
+
+def _get(path: str, params: dict) -> dict | None:
+    settings = get_settings()
+    if not _configured():
+        return None
+    cache_key = f"{path}|{json.dumps(params, sort_keys=True)}"
+    hit = _CACHE.get(cache_key, _TTL_SECONDS)
+    if hit is not None:
+        return hit[0]
+    try:
+        data = shared_client("newsapi").get(f"{_BASE}{path}", params=params, headers={"X-Api-Key": settings.newsapi_key.get()})
+    except MarketVisionError as exc:
+        log.warning("NewsAPI %s failed: %s", path, exc.message)
+        return None
+    _CACHE.set(cache_key, data)
+    return data
+
+
+def clear_cache() -> None:
+    _CACHE.clear()
 
 
 def _sentiment(text: str) -> float:
@@ -29,19 +61,6 @@ def _sentiment_label(score: float) -> str:
     if score <= -0.05:
         return "negative"
     return "neutral"
-
-
-def _get(path: str, params: dict) -> dict | None:
-    if not _API_KEY:
-        return None
-    try:
-        params["apiKey"] = _API_KEY
-        r = requests.get(f"{_BASE}{path}", params=params, timeout=_TIMEOUT)
-        r.raise_for_status()
-        return r.json()
-    except Exception as exc:
-        log.warning("NewsAPI %s failed: %s", path, exc)
-        return None
 
 
 def _enrich(article: dict) -> dict:
@@ -63,7 +82,7 @@ def _enrich(article: dict) -> dict:
 
 class NewsApiService:
     def is_available(self) -> bool:
-        return bool(_API_KEY)
+        return _configured()
 
     def get_stock_news(self, ticker: str, company_name: str = "", limit: int = 10) -> list[dict[str, Any]]:
         """Search for news about a specific stock ticker/company."""

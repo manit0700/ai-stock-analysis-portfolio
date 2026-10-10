@@ -634,21 +634,21 @@ def market_news(category: str = Query(default="general"), limit: int = Query(def
 @app.get("/api/market/macro")
 def market_macro() -> dict:
     if not fred_service.is_available():
-        return {"available": False, "message": "FRED API key not configured"}
+        return {"available": False, "message": "FRED is switched off (MARKETVISION_OFFLINE=1)."}
     return {"available": True, "source": "fred", **fred_service.get_market_conditions()}
 
 
 @app.get("/api/market/macro/snapshot")
 def macro_snapshot() -> dict:
     if not fred_service.is_available():
-        return {"available": False, "message": "FRED API key not configured"}
+        return {"available": False, "message": "FRED is switched off (MARKETVISION_OFFLINE=1)."}
     return fred_service.get_macro_intelligence()
 
 
 @app.get("/api/market/macro/series/{series_id}")
 def macro_series(series_id: str, limit: int = Query(default=12, ge=1, le=60)) -> dict:
     if not fred_service.is_available():
-        return {"available": False, "message": "FRED API key not configured"}
+        return {"available": False, "message": "FRED is switched off (MARKETVISION_OFFLINE=1)."}
     return fred_service.get_indicator(series_id=series_id, limit=limit)
 
 

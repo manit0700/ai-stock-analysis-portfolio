@@ -1,7 +1,9 @@
-"""NewsAPI.org (free developer plan).
+"""NewsAPI.org.
 
-The developer plan delays articles by 24 hours and allows about 100 requests a day, so results
-are always labelled delayed and are cached. The key travels in the ``X-Api-Key`` header.
+The free Developer plan delays articles by 24 hours, searches at most a month back, allows 100
+requests a day, and "cannot be used in a staging or production environment" (newsapi.org/pricing).
+So results are always labelled delayed and cached, and the provider refuses to run in staging or
+production unless the owner declares a paid plan. The key travels in the ``X-Api-Key`` header.
 """
 from __future__ import annotations
 
@@ -19,16 +21,22 @@ class NewsApiProvider(Provider):
     name = "newsapi"
     supports = frozenset({"news"})
 
-    def __init__(self, api_key: Secret, http: HttpClient) -> None:
+    def __init__(self, api_key: Secret, http: HttpClient, *, blocked_reason: str = "") -> None:
         self._key = api_key
         self._http = http
+        self._blocked = blocked_reason
 
     def available(self) -> tuple[bool, str]:
-        return (True, "") if self._key else (False, "NEWSAPI_KEY is not set.")
+        if not self._key:
+            return False, "NEWSAPI_KEY is not set."
+        if self._blocked:
+            return False, self._blocked
+        return True, ""
 
     def news(self, symbol: str | None, query: str | None, limit: int) -> list[dict[str, Any]]:
-        if not self._key:
-            raise ProviderError("NEWSAPI_KEY is not set.", details={"provider": self.name}, code="not_configured")
+        ok, reason = self.available()
+        if not ok:
+            raise ProviderError(reason, details={"provider": self.name}, code="not_configured")
         headers = {"X-Api-Key": self._key.get()}
         size = max(1, min(int(limit), 20))
         if symbol or query:
@@ -38,7 +46,9 @@ class NewsApiProvider(Provider):
         else:
             payload = self._http.get(f"{BASE_URL}/top-headlines", params={"category": "business", "language": "en", "pageSize": size}, headers=headers)
         if not isinstance(payload, dict) or payload.get("status") != "ok":
-            raise ProviderError("newsapi returned an error status.", details={"provider": self.name})
+            # NewsAPI error bodies carry a short code such as "rateLimited" or "apiKeyInvalid".
+            code = str(payload.get("code", "unknown"))[:40] if isinstance(payload, dict) else "unknown"
+            raise ProviderError(f"newsapi returned an error status ({code}).", details={"provider": self.name, "newsapi_code": code})
         items = []
         for article in payload.get("articles", [])[:limit]:
             title = article.get("title") or ""

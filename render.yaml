@@ -28,7 +28,15 @@ services:
         sync: false
       - key: FRED_API_KEY
         sync: false
+      # NewsAPI's free Developer plan forbids production use, so the app ignores NEWSAPI_KEY
+      # here unless MARKETVISION_NEWSAPI_PAID_PLAN=1 (set that only for a paid plan).
       - key: NEWSAPI_KEY
         sync: false
+      - key: MARKETVISION_NEWSAPI_PAID_PLAN
+        sync: false
       - key: MARKETVISION_LLM_API_KEY
+        sync: false
+      - key: MARKETVISION_LLM_BASE_URL
+        sync: false
+      - key: MARKETVISION_LLM_MODEL
         sync: false

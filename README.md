@@ -52,6 +52,7 @@ cd backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt          # core; see requirements-{ml,dev,heavy}.txt
 cp .env.example .env                     # add free API keys if you have them (all optional)
+python scripts/check_providers.py        # which providers actually answer from this machine
 uvicorn app.main:app --reload            # http://127.0.0.1:8000/docs
 
 cd ../frontend-next
@@ -118,3 +119,4 @@ that an earlier version committed to this repository.
 - [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) — the repair plan and its done-tests
 - [docs/FINAL_REPORT.md](docs/FINAL_REPORT.md) — what was repaired, measured results, what remains
 - [docs/OPERATIONS.md](docs/OPERATIONS.md) — free-tier deployment and the (not enabled) scheduled jobs
+- [docs/API_INTEGRATIONS.md](docs/API_INTEGRATIONS.md) — every provider, its exact key name, free-tier limits, live-check status, cloud readiness

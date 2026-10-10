@@ -1,0 +1,41 @@
+name: provider-check
+
+# Live check of the market-data providers from a GitHub-hosted runner, which has internet access.
+# Manual only: it never runs on push, pull request or a schedule. Start it from the Actions tab
+# ("Run workflow") after adding the keys as repository secrets (Settings → Secrets and variables
+# → Actions): FINNHUB_API_KEY, FRED_API_KEY, NEWSAPI_KEY. Missing secrets are reported as
+# "not configured", not as failures.
+#
+# The script prints key NAMES only, never values, and GitHub also masks secret values in logs.
+# It places no orders and calls no language model.
+
+on:
+  workflow_dispatch:
+    inputs:
+      symbol:
+        description: "Ticker to probe"
+        default: "AAPL"
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run: { working-directory: backend }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip, cache-dependency-path: backend/requirements.txt }
+      - run: pip install -r requirements.txt
+      - name: live provider check
+        env:
+          MARKETVISION_ENV: development  # a manual test run; NewsAPI's free plan allows testing
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          NEWSAPI_KEY: ${{ secrets.NEWSAPI_KEY }}
+          PROBE_SYMBOL: ${{ inputs.symbol }}
+        run: python scripts/check_providers.py --symbol "$PROBE_SYMBOL"

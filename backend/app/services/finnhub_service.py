@@ -1,37 +1,68 @@
+"""Finnhub for the older dashboard routes (company profile, financials, news, analyst trends).
+
+It no longer talks to Finnhub on its own. It borrows the process-wide Finnhub client from
+``app.marketdata.clients``, so the key travels in the ``X-Finnhub-Token`` header (never in the
+URL), errors never contain the key, and this module and the v2 data layer share one free-plan
+budget. Answers are cached so a dashboard refresh does not spend the quota again.
+"""
 from __future__ import annotations
 
+import json
 import logging
-import os
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 from typing import Any
 
-import requests
-from dotenv import load_dotenv
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
-# Load .env from backend/ directory regardless of working directory
-load_dotenv(Path(__file__).resolve().parents[2] / ".env")
+from app.core.config import get_settings
+from app.core.errors import MarketVisionError
+from app.marketdata.cache import TTLCache
+from app.marketdata.clients import shared_client
 
 log = logging.getLogger(__name__)
 
-_API_KEY = os.getenv("FINNHUB_API_KEY", "")
 _BASE = "https://finnhub.io/api/v1"
-_TIMEOUT = 10
 _analyzer = SentimentIntensityAnalyzer()
+_CACHE = TTLCache(maxsize=256)
+#: Seconds each endpoint's answer is reused.
+_TTL = {
+    "/quote": 10.0,
+    "/stock/profile2": 86400.0,
+    "/stock/metric": 21600.0,
+    "/stock/recommendation": 21600.0,
+    "/calendar/earnings": 21600.0,
+    "/company-news": 600.0,
+    "/news": 600.0,
+}
+
+
+def _configured() -> bool:
+    settings = get_settings()
+    return bool(settings.finnhub_api_key) and not settings.offline
 
 
 def _get(path: str, params: dict) -> dict | list | None:
-    if not _API_KEY:
+    """GET a Finnhub endpoint. ``None`` when unconfigured or when the call fails (logged, redacted)."""
+    settings = get_settings()
+    if not _configured():
         return None
+    cache_key = f"{path}|{json.dumps(params, sort_keys=True)}"
+    hit = _CACHE.get(cache_key, _TTL.get(path, 300.0))
+    if hit is not None:
+        return hit[0]
     try:
-        params["token"] = _API_KEY
-        r = requests.get(f"{_BASE}{path}", params=params, timeout=_TIMEOUT)
-        r.raise_for_status()
-        return r.json()
-    except Exception as exc:
-        log.warning("Finnhub %s failed: %s", path, exc)
+        data = shared_client("finnhub").get(
+            f"{_BASE}{path}", params=params, headers={"X-Finnhub-Token": settings.finnhub_api_key.get()}
+        )
+    except MarketVisionError as exc:
+        log.warning("Finnhub %s failed: %s", path, exc.message)
         return None
+    _CACHE.set(cache_key, data)
+    return data
+
+
+def clear_cache() -> None:
+    _CACHE.clear()
 
 
 def _sentiment(text: str) -> float:
@@ -49,7 +80,8 @@ def _sentiment_label(score: float) -> str:
 
 class FinnhubService:
     def is_available(self) -> bool:
-        return bool(_API_KEY)
+        """Configured (key set, not offline). Whether Finnhub answers is checked by the provider probe."""
+        return _configured()
 
     def get_quote(self, ticker: str) -> dict[str, Any] | None:
         data = _get("/quote", {"symbol": ticker.upper()})

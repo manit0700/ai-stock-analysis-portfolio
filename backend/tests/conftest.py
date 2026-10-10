@@ -20,7 +20,7 @@ os.environ["MARKETVISION_MODEL_DIR"] = str(_TMP / "models")
 os.environ["MARKETVISION_ENABLE_FINBERT"] = "0"
 for _name in (
     "FINNHUB_API_KEY", "FRED_API_KEY", "NEWSAPI_KEY", "OPENAI_API_KEY", "MARKETVISION_LLM_API_KEY",
-    "MARKETVISION_LLM_BASE_URL", "MARKETVISION_TOOL_TOKEN", "MARKETVISION_ADMIN_TOKEN", "MARKETVISION_SNAPSHOT_ID",
+    "MARKETVISION_LLM_BASE_URL", "MARKETVISION_LLM_MODEL", "MARKETVISION_NEWSAPI_PAID_PLAN", "MARKETVISION_TOOL_TOKEN", "MARKETVISION_ADMIN_TOKEN", "MARKETVISION_SNAPSHOT_ID",
 ):
     os.environ.pop(_name, None)
 
@@ -53,8 +53,14 @@ def settings_env(monkeypatch):
 def _reset_shared_state():
     """Each test starts with a clean rate limiter and the real clock."""
     from app.core import clock, security
+    from app.marketdata.clients import reset_shared_clients
+    from app.services import finnhub_service, newsapi_service
 
     security.limiter.reset()
     clock.set_clock(None)
+    reset_shared_clients()
+    finnhub_service.clear_cache()
+    newsapi_service.clear_cache()
     yield
     clock.set_clock(None)
+    reset_shared_clients()

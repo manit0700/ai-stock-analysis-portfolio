@@ -42,8 +42,8 @@ class TokenBucket:
         while True:
             with self._lock:
                 self._refill()
-                if self._tokens >= 1.0:
-                    self._tokens -= 1.0
+                if self._tokens >= 1.0 - 1e-9:  # tolerance: refill arithmetic can land a hair under 1
+                    self._tokens = max(self._tokens - 1.0, 0.0)
                     return waited
                 need = (1.0 - self._tokens) / self.rate if self.rate > 0 else float("inf")
             if waited + need > max_wait:

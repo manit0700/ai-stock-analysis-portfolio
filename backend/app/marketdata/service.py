@@ -26,7 +26,7 @@ from app.core.config import Settings, get_settings
 from app.core.errors import DataUnavailable, MarketVisionError, NotSupported, ProviderError, RateLimited, ValidationFailed
 from app.marketdata import calendar as cal
 from app.marketdata.cache import DiskFrameCache, TTLCache
-from app.marketdata.http import HttpClient, TokenBucket
+from app.marketdata.http import TokenBucket
 from app.marketdata.models import DataEnvelope, QualityReport
 from app.marketdata.providers.base import Provider
 from app.marketdata.quality import assess_ohlcv, assess_quote, normalise_ohlcv
@@ -55,7 +55,10 @@ TTL = {
     "earnings": 21600.0,
 }
 
-_PERIOD_CALENDAR_DAYS = {"1mo": 31, "3mo": 92, "6mo": 183, "1y": 366, "2y": 731, "5y": 1827, "10y": 3653}
+#: News whose newest article is older than this is flagged ``stale_news``.
+NEWS_STALE_HOURS = 48.0
+
+_PERIOD_CALENDAR_DAYS ={"1mo": 31, "3mo": 92, "6mo": 183, "1y": 366, "2y": 731, "5y": 1827, "10y": 3653}
 VALID_INTERVALS = {"1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h", "1d", "1wk", "1mo"}
 _SYMBOL_CHARS = set("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-^=")
 
@@ -349,11 +352,22 @@ class MarketData:
                 unique.append(item)
         if len(unique) != len(envelope.data) and not envelope.quality.has("duplicate_articles"):
             envelope.quality.add("duplicate_articles", "info", "Articles with a repeated headline were dropped.", len(envelope.data) - len(unique))
-        envelope.data = unique
-        stamps = [pd.Timestamp(i["published_at"]) for i in unique if i.get("published_at")]
-        if stamps:
-            newest = max(s.tz_localize("UTC") if s.tzinfo is None else s.tz_convert("UTC") for s in stamps)
-            envelope.market_timestamp = newest.to_pydatetime()
+        # Every article carries its own age, so nothing old can be shown as breaking news.
+        now = self.clock()
+        dated = []
+        for item in unique:
+            published = _published_utc(item.get("published_at"))
+            age = None if published is None else round(max((now - published).total_seconds(), 0.0) / 3600.0, 1)
+            dated.append({**item, "age_hours": age})
+        envelope.data = dated
+        ages = [i["age_hours"] for i in dated if i["age_hours"] is not None]
+        undated = len(dated) - len(ages)
+        if undated and not envelope.quality.has("undated_articles"):
+            envelope.quality.add("undated_articles", "info", "Articles without a publication time; their age is unknown.", undated)
+        if ages:
+            envelope.market_timestamp = now - timedelta(hours=min(ages))
+            if min(ages) > NEWS_STALE_HOURS and not envelope.quality.has("stale_news"):
+                envelope.quality.add("stale_news", "warning", f"The newest article is {min(ages):.0f} hours old; none of this is recent news.", len(ages))
         if envelope.provider == "newsapi" and "NewsAPI's free plan delays articles by 24 hours." not in envelope.notes:
             envelope.notes.append("NewsAPI's free plan delays articles by 24 hours.")
         return envelope
@@ -429,6 +443,19 @@ class MarketData:
         return {"providers": rows, "order": {k: [n for n in v if n in self.providers] for k, v in self.order.items()}, "market": cal.market_state(self.clock())}
 
 
+def _published_utc(value: Any) -> datetime | None:
+    if not value:
+        return None
+    try:
+        stamp = pd.Timestamp(value)
+    except (ValueError, TypeError):
+        return None
+    if stamp is pd.NaT:
+        return None
+    stamp = stamp.tz_localize("UTC") if stamp.tzinfo is None else stamp.tz_convert("UTC")
+    return stamp.to_pydatetime()
+
+
 def _to_float(value: Any) -> float | None:
     try:
         number = float(value)
@@ -453,6 +480,7 @@ def build_market_data(settings: Settings | None = None) -> MarketData:
     """Assemble the providers this process is configured for."""
     import os
 
+    from app.marketdata.clients import shared_client
     from app.marketdata.providers.finnhub import FinnhubProvider
     from app.marketdata.providers.fred import FredProvider
     from app.marketdata.providers.newsapi import NewsApiProvider
@@ -464,15 +492,14 @@ def build_market_data(settings: Settings | None = None) -> MarketData:
     limiters: dict[str, TokenBucket] = {}
     order = dict(DEFAULT_ORDER)
 
-    def client(name: str, rate: float, capacity: float) -> HttpClient:
-        return HttpClient(name, timeout=settings.http_timeout_seconds, max_retries=settings.http_max_retries, rate_limiter=TokenBucket(rate, capacity))
-
     if not settings.offline:
+        # Keyed providers share one client per process with the older dashboard services, so
+        # the free-plan budget is spent once (see ``app.marketdata.clients``).
         providers.append(YahooProvider())
         limiters["yahoo"] = TokenBucket(2.0, 8.0)
-        providers.append(FinnhubProvider(settings.finnhub_api_key, client("finnhub", 1.0, 30.0)))
-        providers.append(NewsApiProvider(settings.newsapi_key, client("newsapi", 100.0 / 86400.0, 20.0)))
-        providers.append(FredProvider(settings.fred_api_key, client("fred", 2.0, 10.0)))
+        providers.append(FinnhubProvider(settings.finnhub_api_key, shared_client("finnhub", settings)))
+        providers.append(NewsApiProvider(settings.newsapi_key, shared_client("newsapi", settings), blocked_reason=settings.newsapi_blocked_reason))
+        providers.append(FredProvider(settings.fred_api_key, shared_client("fred", settings)))
 
     snapshot_id = os.getenv("MARKETVISION_SNAPSHOT_ID", "").strip()
     if snapshot_id:

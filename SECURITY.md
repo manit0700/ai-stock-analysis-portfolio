@@ -17,14 +17,51 @@ Rotation was **not** performed automatically; it needs the account owner.
 
 ## How credentials are handled now
 
-- All keys come from environment variables (`backend/.env.example` lists them); `.env` is
-  git-ignored. The browser never receives a key: it talks to the backend, which talks to providers.
-- Keys travel in request **headers** (`X-Finnhub-Token`, `X-Api-Key`) wherever the provider allows.
-  FRED only accepts a URL parameter, so error messages never include query strings, and a logging
-  filter (`app/core/secrets.py`) masks every registered secret and key-shaped parameter in every
-  log record, including tracebacks.
+- All keys come from environment variables (`backend/.env.example` lists them); `.env` and
+  `.env.*` are git-ignored, and the template holds placeholders only. The browser never receives a
+  key: it talks to the backend, which talks to providers. The only frontend variable is
+  `NEXT_PUBLIC_API_BASE_URL`, the backend's address.
+- Finnhub and NewsAPI keys travel in request **headers** (`X-Finnhub-Token`, `X-Api-Key`) on every
+  route. *Correction (2026-10-09):* an earlier version of this file said so while the older
+  dashboard routes (`app/services/finnhub_service.py`, `newsapi_service.py`) still put the key in
+  the URL. Those services now borrow the same client as the v2 data layer, so the statement is
+  true everywhere; `tests/test_api_integrations.py` checks it.
+- FRED only accepts its key as a URL parameter, so error messages never include query strings,
+  and a logging filter (`app/core/secrets.py`) masks every registered secret and key-shaped
+  parameter in every log record, including tracebacks.
 - `Secret` wraps each credential so `str()`, `repr()` and accidental serialisation show
-  `Secret(set)`, never the value.
+  `Secret(set)`, never the value. Health responses report only whether a key is set; the live
+  check (`scripts/check_providers.py`, `/api/v2/health/providers`) reports key names and
+  provider outcomes and passes all text through the redactor.
+- The copilot returns a generic message when the language model fails; the raw exception goes to
+  the (redacted) log, not to the browser.
+
+## Rotating a credential
+
+Do this for any key that may have been seen by someone else (pasted into a chat, an issue, a
+screenshot, a commit or a frontend bundle). Rotation is the fix; deleting the string is not.
+
+| Key | Where to regenerate | Then |
+|---|---|---|
+| `FINNHUB_API_KEY` | finnhub.io → Dashboard → API key → regenerate | put it in `backend/.env` |
+| `FRED_API_KEY` | fredaccount.stlouisfed.org/apikeys → request a new key, delete the old one | `backend/.env` |
+| `NEWSAPI_KEY` | newsapi.org → Account → regenerate the API key | `backend/.env` |
+| `MARKETVISION_LLM_API_KEY` | the model provider's console (revoke, create new) | `backend/.env` |
+| `MARKETVISION_TOOL_TOKEN`, `MARKETVISION_ADMIN_TOKEN` | you invent them: `python -c "import secrets; print(secrets.token_urlsafe(32))"` | `backend/.env`, and any agent that calls the API |
+
+After rotating, restart the backend and run `python scripts/check_providers.py`. If the same key
+is stored in a host's secret store (Render, GitHub Actions secrets), update it there too.
+
+## Least privilege
+
+- Use one key per application and per environment (FRED's terms ask for a separate key per
+  application). A key for your laptop and a key for a deployment can then be revoked separately.
+- The `MARKETVISION_TOOL_TOKEN` (read) is what research agents should get; keep
+  `MARKETVISION_ADMIN_TOKEN` for yourself. No key in this project can move real money: there is
+  no brokerage integration.
+- NewsAPI's free Developer plan may not be used in staging or production. The application turns
+  NewsAPI off when `MARKETVISION_ENV` is `staging` or `production` unless
+  `MARKETVISION_NEWSAPI_PAID_PLAN=1` declares a paid plan.
 
 ## Access control
 
