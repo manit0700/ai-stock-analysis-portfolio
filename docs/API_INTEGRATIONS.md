@@ -2,20 +2,19 @@
 
 **Date:** 2026-10-09 · **Branch:** `repair/marketvision-audit` (local; not pushed)
 
-**Live-testing status.** The machine this work was done on cannot reach any market-data
-provider (its network policy blocks Yahoo, Finnhub, FRED and NewsAPI). So every provider below is
-**implemented and tested against recorded response shapes, but not verified live**. The live
-check you run yourself (section C) is what verifies a provider. A key being set is not proof
-that a provider works.
+**Live-testing status.** All four data providers were **verified live on the owner's Mac on
+2026-10-10 03:07 UTC** (`python scripts/check_providers.py`, results in section E). The machine
+the code was written on cannot reach any provider, so the code was first tested against recorded
+response shapes. The copilot has not been tested live (no model is configured).
 
 ## A. API integration inventory
 
 | Provider | Purpose | Exact environment variable | Implemented? | Free tier | Configured here | Live-tested | Limitations |
 |---|---|---|---|---|---|---|---|
-| Yahoo Finance (`yfinance` 1.7.0) | Daily/intraday OHLCV, splits, dividends, fallback quote, profile, news | none | Yes: `app/marketdata/providers/yahoo.py` | Free, unofficial | n/a | **No.** Network blocked: `ConnectionError`, proxy 403 | Unofficial, "intended for personal use only" (yfinance README); can be delayed; never labelled real-time. Raw prices plus `Adj Close` (`auto_adjust=False`); splits/dividends kept as columns |
-| Finnhub | Quotes (primary), profile, company/market news, earnings calendar, basic financials, analyst trends | `FINNHUB_API_KEY` | Yes: provider + older dashboard service | Free key; 60 calls/min | Not set | **No** | Key in `X-Finnhub-Token` header. Budget 0.9/s, burst 5 (≤ 59 in any first minute), shared process-wide. HTTP 429 → `rate_limited`, 401/403 → `provider_auth`. Quote labelled `live` only while the market is open and the quote is ≤ 60 s old |
-| FRED | Interest rates, CPI, unemployment, GDP, yields, VIX | `FRED_API_KEY` (optional) | Yes: provider + older macro service | Free key; ~120 req/min | Not set | **No.** Public CSV failed with `ProxyError` | Without a key, FRED's public CSV is used. The key must go in the URL (FRED allows nothing else), so errors drop query strings and logs are redacted. "." observations become missing, never filled. Revisions noted on every response |
-| NewsAPI | Headlines and search, sentiment inputs | `NEWSAPI_KEY` (**not** `NEWSAPI_API_KEY`) | Yes: provider + older dashboard service | Developer plan: 100 req/day, 24 h delay, a month of history, **development only** | Not set | **No** | Key in `X-Api-Key` header. **Off automatically in staging/production** unless `MARKETVISION_NEWSAPI_PAID_PLAN=1`. Every article carries `age_hours`; `stale_news` warning if the newest is > 48 h old |
+| Yahoo Finance (`yfinance` 1.7.0) | Daily/intraday OHLCV, splits, dividends, fallback quote, profile, news | none | Yes: `app/marketdata/providers/yahoo.py` | Free, unofficial | n/a | **Yes**, owner's Mac, 2026-10-10 | Unofficial, "intended for personal use only" (yfinance README); can be delayed; never labelled real-time. Raw prices plus `Adj Close` (`auto_adjust=False`); splits/dividends kept as columns |
+| Finnhub | Quotes (primary), profile, company/market news, earnings calendar, basic financials, analyst trends | `FINNHUB_API_KEY` | Yes: provider + older dashboard service | Free key; 60 calls/min | Set (owner's Mac) | **Yes**, 2026-10-10 | Key in `X-Finnhub-Token` header. Budget 0.9/s, burst 5 (≤ 59 in any first minute), shared process-wide. HTTP 429 → `rate_limited`, 401/403 → `provider_auth`. Quote labelled `live` only while the market is open and the quote is ≤ 60 s old |
+| FRED | Interest rates, CPI, unemployment, GDP, yields, VIX | `FRED_API_KEY` (optional) | Yes: provider + older macro service | Free key; ~120 req/min | Set (owner's Mac) | **Yes** (JSON API), 2026-10-10 | Without a key, FRED's public CSV is used. The key must go in the URL (FRED allows nothing else), so errors drop query strings and logs are redacted. "." observations become missing, never filled. Revisions noted on every response |
+| NewsAPI | Headlines and search, sentiment inputs | `NEWSAPI_KEY` (**not** `NEWSAPI_API_KEY`) | Yes: provider + older dashboard service | Developer plan: 100 req/day, 24 h delay, a month of history, **development only** | Set (owner's Mac) | **Yes**, 2026-10-10 | Key in `X-Api-Key` header. **Off automatically in staging/production** unless `MARKETVISION_NEWSAPI_PAID_PLAN=1`. Every article carries `age_hours`; `stale_news` warning if the newest is > 48 h old |
 | AI copilot (OpenAI-compatible) | Plain-language explanations of computed facts | `MARKETVISION_LLM_API_KEY` (or `OPENAI_API_KEY`), `MARKETVISION_LLM_BASE_URL`, `MARKETVISION_LLM_MODEL` | Yes, **fixed in this pass** (it used to ignore these three) | Free with a local server; hosted models are paid | Not set | **No** | Needs `pip install -r requirements-heavy.txt` (openai client). Off by default. Generic error messages; instructed never to state numbers absent from its context |
 | Anthropic Claude | Possible hosted model behind the copilot | Uses the copilot variables; `ANTHROPIC_API_KEY` is **not read** | Possible through the copilot, not tested | **Paid** per token | Not set | **No** (not activated, per your instruction) | Claude's OpenAI-compatible endpoint is described by Anthropic as "not considered a long-term or production-ready solution" for most uses; the copilot already omits `temperature` for it (recent models reject values below 1) |
 | Alpha Vantage | Extra history, indicators | none (not implemented) | **No** adapter | 25 requests/day | n/a | n/a | Too small a quota to add value beyond Yahoo + Finnhub for this app. Future option only |
@@ -139,17 +138,24 @@ manual-only, prints no secret values and places no orders.
 
   All use stand-in HTTP sessions: **they show the code is correct, not that any provider works.**
 - **Secret scan:** clean. Frontend bundle scan (inside the suite): clean.
-- **Live provider check from this machine** (`scripts/check_providers.py`, exit code 2):
+- **Live provider check on the owner's Mac** (2026-10-10 03:07 UTC, after the close; exit code 0):
 
-  | Check | Outcome | Reason |
-  |---|---|---|
-  | yahoo_history | failed | `ConnectionError` (network policy; proxy 403) |
-  | yahoo_quote | failed | no data (same cause) |
-  | finnhub_quote, finnhub_company_news | not configured | no key on this machine |
-  | fred_series | failed | public CSV: `ProxyError` |
-  | newsapi_news | not configured | no key on this machine |
+  | Check | Outcome | ms | Freshness | Market time (UTC) | Result |
+  |---|---|---|---|---|---|
+  | yahoo_history | ok | 624 | historical | 2026-10-09 20:00 | 8 bars, last 2026-10-09, adjusted close present |
+  | yahoo_quote | ok | 194 | historical | 2026-10-09 19:59 | AAPL 336.63 (last 1-minute bar), market after close |
+  | finnhub_quote | ok | 116 | historical | 2026-10-09 20:00 | AAPL 336.64, so Yahoo and Finnhub agree within a cent |
+  | finnhub_company_news | ok | 199 | delayed | | 3 articles, newest 3.9 h old |
+  | fred_series | ok | 258 | historical | 2026-10-08 | DGS10, 21 observations, 0 missing, JSON API |
+  | newsapi_news | ok | 167 | delayed | | 3 articles, newest 35.9 h old (free plan's 24 h delay) |
 
-- **Providers verified live:** none. **Not verified:** Yahoo, Finnhub, FRED, NewsAPI, copilot.
+  The timestamps are right: 20:00 UTC is the 16:00 New York close, and the labels are correct for
+  a closed market. The `live` label was not exercised, because the check ran after the close; it
+  needs a run during market hours.
+- **Earlier run in the development container:** every provider failed or was not configured,
+  because that machine's network policy blocks them (`ConnectionError`, `ProxyError`).
+- **Providers verified live:** Yahoo, Finnhub, FRED, NewsAPI. **Not verified:** copilot (no model
+  configured); Finnhub's `live` quote label during market hours.
 
 ## Agent-tool safety (Part 8), as checked in code
 
@@ -173,7 +179,7 @@ projects are **not** connected; that waits for your explicit go-ahead.
 
 1. Revoke the old Finnhub key and create a new one (finnhub.io).
 2. Create free FRED and NewsAPI keys; put all three in `~/marketvision/backend/.env`.
-3. Run `python scripts/check_providers.py` on your Mac and send me the output (it contains no keys).
+3. ~~Run the live check on your Mac~~ Done 2026-10-10: all four providers answered. Re-run during market hours once to see a `live` Finnhub quote.
 4. Review the branch, then push it yourself when satisfied.
 5. Decide later, and only if you want to: a local model for the copilot (free), or a paid hosted
    model; a scheduled GitHub Actions job (needs state stored in a repo); Massive as an official
