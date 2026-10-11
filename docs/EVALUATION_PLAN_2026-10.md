@@ -69,6 +69,14 @@ data. The new holdout (2022 onwards) has not been used to score, select or tune 
 
 ## Record
 
-- Snapshot id: *(filled in after the build)*
+- Snapshot id: **`yahoo-daily-3b1b2218e5af`**. Built 2026-10-11 on the owner's Mac, 1999-01-04 to
+  2026-10-09: 97 stocks plus 14 context instruments and 2 FRED series. All 113 files were verified
+  against the manifest after the transfer.
+  - **Not downloaded (dropped, as the plan allows):** BK (Yahoo had no data under that ticker)
+    and WBA (taken private in 2025, so Yahoo no longer serves it). WBA is a concrete case of the
+    survivorship gap described above.
+  - **Quality flags** (large one-day moves, kept): AAPL 1, AIG 4, C 1, MO 1, MS 1, VIX 14. These
+    are real events: the 2000 and 2008 crashes, spin-offs, reverse splits and VIX spikes. Targets
+    use adjusted closes.
 - Development-stage notes: *(filled in after step 2)*
 - Holdout run id and verdict: *(filled in after step 3)*
