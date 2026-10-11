@@ -75,8 +75,27 @@ data. The new holdout (2022 onwards) has not been used to score, select or tune 
   - **Not downloaded (dropped, as the plan allows):** BK (Yahoo had no data under that ticker)
     and WBA (taken private in 2025, so Yahoo no longer serves it). WBA is a concrete case of the
     survivorship gap described above.
-  - **Quality flags** (large one-day moves, kept): AAPL 1, AIG 4, C 1, MO 1, MS 1, VIX 14. These
-    are real events: the 2000 and 2008 crashes, spin-offs, reverse splits and VIX spikes. Targets
-    use adjusted closes.
-- Development-stage notes: *(filled in after step 2)*
+  - **Quality flags** (large one-day moves, kept): AAPL 1, AIG 4, C 1, MO 1, MS 1, VIX 14. Checked
+    by date; all are real events:
+    - AAPL 2000-09-29 (−52%, profit warning).
+    - AIG, C and MS in Sept 2008 – Aug 2009 (the financial crisis).
+    - MO 2008-03-31: the Philip Morris International spin-off, −69.9% in raw close but −2.5%
+      in the adjusted close the targets use.
+    - VIX spikes.
+
+    *Correction:* the snapshot manifest's limits list says Yahoo does not adjust GE's spin-offs.
+    That was written before checking, and it is wrong: GE's adjusted series shows no such jumps.
+    The script text is corrected; the manifest of this snapshot keeps the original wording.
+- Development-stage notes (run `mv5d-20261011-202506-e982a61a5a`, development only):
+  - **Data:** 563,020 complete rows (2000-03-13 to 2026-10-02) from 97 stocks. All seven
+    feature groups are used: price, volume, market, qqq, vix, sector and macro. Base rate 0.542.
+    The holdout has 115,624 rows (2022-01-03 to 2026-10-02).
+  - **All six leakage checks pass.** The shuffled-label AUC averages 0.495 over 5 shuffles.
+  - **Validation:** no candidate beats the constant base rate.
+    - Selected: `random_forest {max_depth: 4}`, Brier skill −0.00053, within-fold AUC 0.515.
+    - Best logistic regression: −0.0024. Best gradient boosting: −0.0051. LightGBM: −0.0062.
+  - Expected-return R² against the historical mean: −0.0017.
+  - **No data problem was found, so nothing is changed.** The full run follows exactly as planned.
+    Because validation skill is negative, requirement 5 of rule v1 is expected to fail. The
+    holdout is still scored once, as committed.
 - Holdout run id and verdict: *(filled in after step 3)*

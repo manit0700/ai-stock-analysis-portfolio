@@ -1,0 +1,33 @@
+{
+  "candidate": "random_forest",
+  "label": "Random forest",
+  "params": {
+    "max_depth": 4
+  },
+  "criterion": "lowest pooled walk-forward validation Brier score among models",
+  "validation_brier": 0.247155,
+  "validation_brier_skill_vs_prior": -0.000528,
+  "validation_brier_skill_interval": {
+    "point": -0.000528,
+    "low": -0.004827,
+    "high": 0.003223,
+    "level": 0.95,
+    "blocks": 624,
+    "resamples": 1000,
+    "method": "calendar-week block bootstrap",
+    "share_above_zero": 0.405
+  },
+  "folds_with_positive_skill": 5,
+  "n_folds": 8,
+  "calibration": {
+    "chosen": "sigmoid",
+    "brier_on_later_validation_rows": {
+      "none": 0.247177,
+      "sigmoid": 0.246181,
+      "isotonic": 0.247409
+    },
+    "fitted_on_rows": 261593,
+    "choice_made_on_rows": 104638
+  },
+  "written_at": "2026-10-11T20:25:06.894668Z"
+}

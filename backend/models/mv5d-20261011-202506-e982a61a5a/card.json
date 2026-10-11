@@ -1,0 +1,1848 @@
+{
+  "model_id": "mv5d-20261011-202506-e982a61a5a",
+  "created_at": "2026-10-11T20:25:06.894683Z",
+  "status": "development_only",
+  "target": {
+    "horizon_sessions": 5,
+    "definition": "adjusted close 5 trading sessions after the as-of date is higher than the adjusted close on the as-of date",
+    "positive_class": "5-session forward return above zero"
+  },
+  "data": {
+    "source": "snapshot:yahoo-daily-3b1b2218e5af",
+    "snapshot_id": "yahoo-daily-3b1b2218e5af",
+    "snapshot_content_sha256": "3b1b2218e5af5f2d34b0d9e48ed7e9d473e8a95e2bd4f143d5e72f747ded6968",
+    "snapshot_limits": [
+      "Universe fixed as of end-2021: no hindsight inside a 2022+ holdout, but companies delisted or acquired since are missing (Yahoo serves current tickers only).",
+      "Before 2022 the list is hindsight-chosen (large in 2021): development results are flattered by survivorship bias.",
+      "Yahoo does not adjust prices for every spin-off (e.g. GE's); such days appear as large one-day falls.",
+      "Sector ETFs XLC (2018) and XLRE (2015) are young: their stocks have no sector features before then.",
+      "FRED yields are as published now, after revisions; Treasury yields are rarely revised."
+    ],
+    "symbols": [
+      "AAPL",
+      "ABBV",
+      "ABT",
+      "ACN",
+      "ADBE",
+      "AIG",
+      "AMGN",
+      "AMT",
+      "AMZN",
+      "AVGO",
+      "AXP",
+      "BA",
+      "BAC",
+      "BIIB",
+      "BKNG",
+      "BLK",
+      "BMY",
+      "BRK-B",
+      "C",
+      "CAT",
+      "CHTR",
+      "CL",
+      "CMCSA",
+      "COF",
+      "COP",
+      "COST",
+      "CRM",
+      "CSCO",
+      "CVS",
+      "CVX",
+      "DHR",
+      "DIS",
+      "DOW",
+      "DUK",
+      "EMR",
+      "EXC",
+      "F",
+      "FDX",
+      "GD",
+      "GE",
+      "GILD",
+      "GM",
+      "GOOGL",
+      "GS",
+      "HD",
+      "HON",
+      "IBM",
+      "INTC",
+      "JNJ",
+      "JPM",
+      "KHC",
+      "KO",
+      "LIN",
+      "LLY",
+      "LMT",
+      "LOW",
+      "MA",
+      "MCD",
+      "MDLZ",
+      "MDT",
+      "MET",
+      "META",
+      "MMM",
+      "MO",
+      "MRK",
+      "MS",
+      "MSFT",
+      "NEE",
+      "NFLX",
+      "NKE",
+      "NVDA",
+      "ORCL",
+      "PEP",
+      "PFE",
+      "PG",
+      "PM",
+      "PYPL",
+      "QCOM",
+      "RTX",
+      "SBUX",
+      "SO",
+      "SPG",
+      "T",
+      "TGT",
+      "TMO",
+      "TMUS",
+      "TSLA",
+      "TXN",
+      "UNH",
+      "UNP",
+      "UPS",
+      "USB",
+      "V",
+      "VZ",
+      "WFC",
+      "WMT",
+      "XOM"
+    ],
+    "skipped_symbols": {},
+    "rows_total": 631619,
+    "rows_with_label": 631134,
+    "rows_after_warmup": 602034,
+    "rows_complete": 563020,
+    "rows_dropped_incomplete_features": 39014,
+    "group_coverage": {
+      "price": 1.0,
+      "volume": 0.9999,
+      "market": 1.0,
+      "qqq": 1.0,
+      "vix": 1.0,
+      "sector": 0.9353,
+      "macro": 1.0
+    },
+    "groups_used": [
+      "price",
+      "volume",
+      "market",
+      "qqq",
+      "vix",
+      "sector",
+      "macro"
+    ],
+    "groups_absent": [],
+    "missing_value_policy": "complete rows only; nothing imputed",
+    "first_date": "2000-03-13",
+    "last_date": "2026-10-02",
+    "base_rate": 0.542116,
+    "rows_per_symbol": {
+      "AAPL": 6680,
+      "ABBV": 3159,
+      "ABT": 6680,
+      "ACN": 6039,
+      "ADBE": 6680,
+      "AIG": 6680,
+      "AMGN": 6680,
+      "AMT": 2741,
+      "AMZN": 6680,
+      "AVGO": 4016,
+      "AXP": 6680,
+      "BA": 6680,
+      "BAC": 6680,
+      "BIIB": 6658,
+      "BKNG": 6620,
+      "BLK": 6492,
+      "BMY": 6680,
+      "BRK-B": 6680,
+      "C": 6680,
+      "CAT": 6680,
+      "CHTR": 2063,
+      "CL": 6680,
+      "CMCSA": 2063,
+      "COF": 6680,
+      "COP": 6680,
+      "COST": 6680,
+      "CRM": 5306,
+      "CSCO": 6680,
+      "CVS": 6680,
+      "CVX": 6680,
+      "DHR": 6680,
+      "DIS": 2063,
+      "DOW": 1596,
+      "DUK": 6680,
+      "EMR": 6680,
+      "EXC": 6680,
+      "F": 6680,
+      "FDX": 6680,
+      "GD": 6680,
+      "GE": 6680,
+      "GILD": 6637,
+      "GM": 3691,
+      "GOOGL": 2063,
+      "GS": 6597,
+      "HD": 6680,
+      "HON": 6680,
+      "IBM": 6680,
+      "INTC": 6680,
+      "JNJ": 6680,
+      "JPM": 6680,
+      "KHC": 2529,
+      "KO": 6680,
+      "LIN": 6680,
+      "LLY": 6680,
+      "LMT": 6680,
+      "LOW": 6680,
+      "MA": 4821,
+      "MCD": 6680,
+      "MDLZ": 6064,
+      "MDT": 6680,
+      "MET": 6363,
+      "META": 2063,
+      "MMM": 6680,
+      "MO": 6680,
+      "MRK": 6680,
+      "MS": 6680,
+      "MSFT": 6680,
+      "NEE": 6680,
+      "NFLX": 2063,
+      "NKE": 6680,
+      "NVDA": 6667,
+      "ORCL": 6680,
+      "PEP": 6680,
+      "PFE": 6680,
+      "PG": 6680,
+      "PM": 4367,
+      "PYPL": 2529,
+      "QCOM": 6680,
+      "RTX": 6680,
+      "SBUX": 6680,
+      "SO": 6680,
+      "SPG": 2741,
+      "T": 2063,
+      "TGT": 6680,
+      "TMO": 6680,
+      "TMUS": 2063,
+      "TSLA": 3791,
+      "TXN": 6680,
+      "UNH": 6680,
+      "UNP": 6680,
+      "UPS": 6464,
+      "USB": 6680,
+      "V": 4365,
+      "VZ": 2063,
+      "WFC": 6680,
+      "WMT": 6680,
+      "XOM": 6680
+    },
+    "schema_problems": [],
+    "context_missing": {}
+  },
+  "schema": {
+    "name": "marketvision-daily",
+    "version": "1.0.0",
+    "hash": "a07073e7644c330ba3b7b4813dea563de6b2eb97da78f43ca19f33d19edea932"
+  },
+  "features": [
+    "ret_1",
+    "ret_5",
+    "ret_10",
+    "ret_21",
+    "ret_63",
+    "mom_126_21",
+    "vol_10",
+    "vol_21",
+    "vol_63",
+    "vol_ratio_10_63",
+    "rsi_14",
+    "sma_gap_20",
+    "sma_gap_50",
+    "sma_gap_200",
+    "macd_hist_norm",
+    "bb_pctb_20",
+    "atr_pct_14",
+    "dist_52w_high",
+    "drawdown_63",
+    "range_pos_20",
+    "volume_z_20",
+    "volume_ratio_5_20",
+    "up_volume_share_10",
+    "rel_ret_5_spy",
+    "rel_ret_21_spy",
+    "rel_ret_63_spy",
+    "beta_63_spy",
+    "corr_63_spy",
+    "spy_ret_5",
+    "spy_ret_21",
+    "spy_vol_21",
+    "spy_sma_gap_50",
+    "spy_sma_gap_200",
+    "spy_drawdown_63",
+    "qqq_ret_5",
+    "qqq_ret_21",
+    "qqq_rel_spy_21",
+    "vix_level",
+    "vix_chg_5",
+    "vix_z_63",
+    "sector_ret_5",
+    "sector_ret_21",
+    "sector_rel_spy_21",
+    "rel_ret_21_sector",
+    "us10y_level",
+    "us10y_chg_21",
+    "yield_curve_10y2y"
+  ],
+  "feature_groups": [
+    "price",
+    "volume",
+    "market",
+    "qqq",
+    "vix",
+    "sector",
+    "macro"
+  ],
+  "config": {
+    "horizon": 5,
+    "embargo": 5,
+    "first_validation_start": "2010-01-01",
+    "holdout_start": "2022-01-01",
+    "n_folds": 8,
+    "seed": 20261009,
+    "n_bootstrap": 1000,
+    "quick": false,
+    "min_group_coverage": 0.9,
+    "groups": null,
+    "include_lightgbm": null,
+    "leakage_samples": 12,
+    "shuffle_repeats": 5,
+    "suspicious_correlation": 0.2,
+    "notes": []
+  },
+  "splits": {
+    "development": {
+      "first": "2000-03-13",
+      "last": "2021-12-16",
+      "rows": 446426,
+      "base_rate": 0.545416
+    },
+    "holdout": {
+      "first": "2022-01-03",
+      "last": "2026-10-02",
+      "rows": 115624,
+      "start": "2022-01-03"
+    },
+    "purge": "training rows must have their 5-session label window end more than 5 sessions before the test period starts",
+    "validation_folds": [
+      {
+        "fold": "fold1:2010-01-04..2011-06-29",
+        "train_end": "2009-12-16",
+        "test_start": "2010-01-04",
+        "test_end": "2011-06-29"
+      },
+      {
+        "fold": "fold2:2011-06-30..2012-12-27",
+        "train_end": "2011-06-15",
+        "test_start": "2011-06-30",
+        "test_end": "2012-12-27"
+      },
+      {
+        "fold": "fold3:2012-12-28..2014-06-27",
+        "train_end": "2012-12-12",
+        "test_start": "2012-12-28",
+        "test_end": "2014-06-27"
+      },
+      {
+        "fold": "fold4:2014-06-30..2015-12-23",
+        "train_end": "2014-06-13",
+        "test_start": "2014-06-30",
+        "test_end": "2015-12-23"
+      },
+      {
+        "fold": "fold5:2015-12-24..2017-06-22",
+        "train_end": "2015-12-09",
+        "test_start": "2015-12-24",
+        "test_end": "2017-06-22"
+      },
+      {
+        "fold": "fold6:2017-06-23..2018-12-20",
+        "train_end": "2017-06-08",
+        "test_start": "2017-06-23",
+        "test_end": "2018-12-20"
+      },
+      {
+        "fold": "fold7:2018-12-21..2020-06-19",
+        "train_end": "2018-12-06",
+        "test_start": "2018-12-21",
+        "test_end": "2020-06-19"
+      },
+      {
+        "fold": "fold8:2020-06-22..2021-12-16",
+        "train_end": "2020-06-05",
+        "test_start": "2020-06-22",
+        "test_end": "2021-12-16"
+      }
+    ]
+  },
+  "validation": [
+    {
+      "candidate": "baseline_prior",
+      "label": "Majority-class baseline (constant base rate)",
+      "params": {},
+      "is_baseline": true,
+      "pooled": {
+        "n": 261593,
+        "base_rate": 0.559442,
+        "majority_class_accuracy": 0.559442,
+        "accuracy": 0.559442,
+        "balanced_accuracy": 0.5,
+        "precision": 0.559442,
+        "recall": 1.0,
+        "f1": 0.71749,
+        "roc_auc": 0.505327,
+        "brier": 0.247024,
+        "log_loss": 0.687187,
+        "predicted_positive_share": 1.0,
+        "mean_probability": 0.535976,
+        "confusion": {
+          "tp": 146346,
+          "fp": 115247,
+          "tn": 0,
+          "fn": 0
+        }
+      },
+      "mean_fold_roc_auc": 0.5,
+      "brier_skill_vs_prior": 0.0,
+      "folds_with_positive_skill": 0,
+      "folds": [
+        {
+          "fold": "fold1:2010-01-04..2011-06-29",
+          "n": 29883,
+          "brier": 0.247877,
+          "brier_skill_vs_prior": 0.0
+        },
+        {
+          "fold": "fold2:2011-06-30..2012-12-27",
+          "n": 30640,
+          "brier": 0.248496,
+          "brier_skill_vs_prior": 0.0
+        },
+        {
+          "fold": "fold3:2012-12-28..2014-06-27",
+          "n": 30989,
+          "brier": 0.245389,
+          "brier_skill_vs_prior": 0.0
+        },
+        {
+          "fold": "fold4:2014-06-30..2015-12-23",
+          "n": 31274,
+          "brier": 0.248347,
+          "brier_skill_vs_prior": 0.0
+        },
+        {
+          "fold": "fold5:2015-12-24..2017-06-22",
+          "n": 32354,
+          "brier": 0.24741,
+          "brier_skill_vs_prior": 0.0
+        },
+        {
+          "fold": "fold6:2017-06-23..2018-12-20",
+          "n": 33771,
+          "brier": 0.2477,
+          "brier_skill_vs_prior": 0.0
+        },
+        {
+          "fold": "fold7:2018-12-21..2020-06-19",
+          "n": 36113,
+          "brier": 0.245263,
+          "brier_skill_vs_prior": 0.0
+        },
+        {
+          "fold": "fold8:2020-06-22..2021-12-16",
+          "n": 36569,
+          "brier": 0.246124,
+          "brier_skill_vs_prior": 0.0
+        }
+      ],
+      "seconds": 0.6
+    },
+    {
+      "candidate": "baseline_trailing_frequency",
+      "label": "Historical-return baseline (stock's trailing 252-session frequency)",
+      "params": {},
+      "is_baseline": true,
+      "pooled": {
+        "n": 261593,
+        "base_rate": 0.559442,
+        "majority_class_accuracy": 0.559442,
+        "accuracy": 0.554774,
+        "balanced_accuracy": 0.50069,
+        "precision": 0.559798,
+        "recall": 0.955626,
+        "f1": 0.706017,
+        "roc_auc": 0.497313,
+        "brier": 0.247446,
+        "log_loss": 0.688042,
+        "predicted_positive_share": 0.955018,
+        "mean_probability": 0.548298,
+        "confusion": {
+          "tp": 139852,
+          "fp": 109974,
+          "tn": 5273,
+          "fn": 6494
+        }
+      },
+      "mean_fold_roc_auc": 0.493692,
+      "brier_skill_vs_prior": -0.001708,
+      "folds_with_positive_skill": 2,
+      "folds": [
+        {
+          "fold": "fold1:2010-01-04..2011-06-29",
+          "n": 29883,
+          "brier": 0.24803,
+          "brier_skill_vs_prior": -0.000615
+        },
+        {
+          "fold": "fold2:2011-06-30..2012-12-27",
+          "n": 30640,
+          "brier": 0.249825,
+          "brier_skill_vs_prior": -0.005346
+        },
+        {
+          "fold": "fold3:2012-12-28..2014-06-27",
+          "n": 30989,
+          "brier": 0.244379,
+          "brier_skill_vs_prior": 0.004115
+        },
+        {
+          "fold": "fold4:2014-06-30..2015-12-23",
+          "n": 31274,
+          "brier": 0.249064,
+          "brier_skill_vs_prior": -0.002886
+        },
+        {
+          "fold": "fold5:2015-12-24..2017-06-22",
+          "n": 32354,
+          "brier": 0.24839,
+          "brier_skill_vs_prior": -0.003964
+        },
+        {
+          "fold": "fold6:2017-06-23..2018-12-20",
+          "n": 33771,
+          "brier": 0.247594,
+          "brier_skill_vs_prior": 0.000425
+        },
+        {
+          "fold": "fold7:2018-12-21..2020-06-19",
+          "n": 36113,
+          "brier": 0.245604,
+          "brier_skill_vs_prior": -0.001389
+        },
+        {
+          "fold": "fold8:2020-06-22..2021-12-16",
+          "n": 36569,
+          "brier": 0.247041,
+          "brier_skill_vs_prior": -0.003725
+        }
+      ],
+      "seconds": 0.6
+    },
+    {
+      "candidate": "logistic_regression",
+      "label": "Logistic regression (standardised inputs)",
+      "params": {
+        "C": 0.001
+      },
+      "is_baseline": false,
+      "pooled": {
+        "n": 261593,
+        "base_rate": 0.559442,
+        "majority_class_accuracy": 0.559442,
+        "accuracy": 0.551085,
+        "balanced_accuracy": 0.497439,
+        "precision": 0.558114,
+        "recall": 0.94869,
+        "f1": 0.702782,
+        "roc_auc": 0.50844,
+        "brier": 0.24761,
+        "log_loss": 0.688516,
+        "predicted_positive_share": 0.950947,
+        "mean_probability": 0.565051,
+        "confusion": {
+          "tp": 138837,
+          "fp": 109924,
+          "tn": 5323,
+          "fn": 7509
+        }
+      },
+      "mean_fold_roc_auc": 0.509729,
+      "brier_skill_vs_prior": -0.002372,
+      "folds_with_positive_skill": 3,
+      "folds": [
+        {
+          "fold": "fold1:2010-01-04..2011-06-29",
+          "n": 29883,
+          "brier": 0.250185,
+          "brier_skill_vs_prior": -0.00931
+        },
+        {
+          "fold": "fold2:2011-06-30..2012-12-27",
+          "n": 30640,
+          "brier": 0.245709,
+          "brier_skill_vs_prior": 0.011216
+        },
+        {
+          "fold": "fold3:2012-12-28..2014-06-27",
+          "n": 30989,
+          "brier": 0.245925,
+          "brier_skill_vs_prior": -0.002187
+        },
+        {
+          "fold": "fold4:2014-06-30..2015-12-23",
+          "n": 31274,
+          "brier": 0.24669,
+          "brier_skill_vs_prior": 0.006671
+        },
+        {
+          "fold": "fold5:2015-12-24..2017-06-22",
+          "n": 32354,
+          "brier": 0.247221,
+          "brier_skill_vs_prior": 0.000761
+        },
+        {
+          "fold": "fold6:2017-06-23..2018-12-20",
+          "n": 33771,
+          "brier": 0.249682,
+          "brier_skill_vs_prior": -0.008002
+        },
+        {
+          "fold": "fold7:2018-12-21..2020-06-19",
+          "n": 36113,
+          "brier": 0.248942,
+          "brier_skill_vs_prior": -0.015
+        },
+        {
+          "fold": "fold8:2020-06-22..2021-12-16",
+          "n": 36569,
+          "brier": 0.24643,
+          "brier_skill_vs_prior": -0.001243
+        }
+      ],
+      "seconds": 12.5
+    },
+    {
+      "candidate": "logistic_regression",
+      "label": "Logistic regression (standardised inputs)",
+      "params": {
+        "C": 0.01
+      },
+      "is_baseline": false,
+      "pooled": {
+        "n": 261593,
+        "base_rate": 0.559442,
+        "majority_class_accuracy": 0.559442,
+        "accuracy": 0.549999,
+        "balanced_accuracy": 0.497409,
+        "precision": 0.558086,
+        "recall": 0.93978,
+        "f1": 0.7003,
+        "roc_auc": 0.508265,
+        "brier": 0.247787,
+        "log_loss": 0.688894,
+        "predicted_positive_share": 0.942063,
+        "mean_probability": 0.565262,
+        "confusion": {
+          "tp": 137533,
+          "fp": 108904,
+          "tn": 6343,
+          "fn": 8813
+        }
+      },
+      "mean_fold_roc_auc": 0.508618,
+      "brier_skill_vs_prior": -0.003089,
+      "folds_with_positive_skill": 3,
+      "folds": [
+        {
+          "fold": "fold1:2010-01-04..2011-06-29",
+          "n": 29883,
+          "brier": 0.250054,
+          "brier_skill_vs_prior": -0.008779
+        },
+        {
+          "fold": "fold2:2011-06-30..2012-12-27",
+          "n": 30640,
+          "brier": 0.245449,
+          "brier_skill_vs_prior": 0.012263
+        },
+        {
+          "fold": "fold3:2012-12-28..2014-06-27",
+          "n": 30989,
+          "brier": 0.246796,
+          "brier_skill_vs_prior": -0.005735
+        },
+        {
+          "fold": "fold4:2014-06-30..2015-12-23",
+          "n": 31274,
+          "brier": 0.246746,
+          "brier_skill_vs_prior": 0.006448
+        },
+        {
+          "fold": "fold5:2015-12-24..2017-06-22",
+          "n": 32354,
+          "brier": 0.247341,
+          "brier_skill_vs_prior": 0.000277
+        },
+        {
+          "fold": "fold6:2017-06-23..2018-12-20",
+          "n": 33771,
+          "brier": 0.249887,
+          "brier_skill_vs_prior": -0.008831
+        },
+        {
+          "fold": "fold7:2018-12-21..2020-06-19",
+          "n": 36113,
+          "brier": 0.249311,
+          "brier_skill_vs_prior": -0.016503
+        },
+        {
+          "fold": "fold8:2020-06-22..2021-12-16",
+          "n": 36569,
+          "brier": 0.246578,
+          "brier_skill_vs_prior": -0.001844
+        }
+      ],
+      "seconds": 15.9
+    },
+    {
+      "candidate": "logistic_regression",
+      "label": "Logistic regression (standardised inputs)",
+      "params": {
+        "C": 0.1
+      },
+      "is_baseline": false,
+      "pooled": {
+        "n": 261593,
+        "base_rate": 0.559442,
+        "majority_class_accuracy": 0.559442,
+        "accuracy": 0.549858,
+        "balanced_accuracy": 0.497423,
+        "precision": 0.558091,
+        "recall": 0.938488,
+        "f1": 0.699945,
+        "roc_auc": 0.508223,
+        "brier": 0.247815,
+        "log_loss": 0.688953,
+        "predicted_positive_share": 0.940759,
+        "mean_probability": 0.565198,
+        "confusion": {
+          "tp": 137344,
+          "fp": 108752,
+          "tn": 6495,
+          "fn": 9002
+        }
+      },
+      "mean_fold_roc_auc": 0.508445,
+      "brier_skill_vs_prior": -0.0032,
+      "folds_with_positive_skill": 3,
+      "folds": [
+        {
+          "fold": "fold1:2010-01-04..2011-06-29",
+          "n": 29883,
+          "brier": 0.250041,
+          "brier_skill_vs_prior": -0.008729
+        },
+        {
+          "fold": "fold2:2011-06-30..2012-12-27",
+          "n": 30640,
+          "brier": 0.245416,
+          "brier_skill_vs_prior": 0.012396
+        },
+        {
+          "fold": "fold3:2012-12-28..2014-06-27",
+          "n": 30989,
+          "brier": 0.246942,
+          "brier_skill_vs_prior": -0.006332
+        },
+        {
+          "fold": "fold4:2014-06-30..2015-12-23",
+          "n": 31274,
+          "brier": 0.246748,
+          "brier_skill_vs_prior": 0.006437
+        },
+        {
+          "fold": "fold5:2015-12-24..2017-06-22",
+          "n": 32354,
+          "brier": 0.247357,
+          "brier_skill_vs_prior": 0.000214
+        },
+        {
+          "fold": "fold6:2017-06-23..2018-12-20",
+          "n": 33771,
+          "brier": 0.249894,
+          "brier_skill_vs_prior": -0.00886
+        },
+        {
+          "fold": "fold7:2018-12-21..2020-06-19",
+          "n": 36113,
+          "brier": 0.24938,
+          "brier_skill_vs_prior": -0.016785
+        },
+        {
+          "fold": "fold8:2020-06-22..2021-12-16",
+          "n": 36569,
+          "brier": 0.246596,
+          "brier_skill_vs_prior": -0.00192
+        }
+      ],
+      "seconds": 16.2
+    },
+    {
+      "candidate": "logistic_regression",
+      "label": "Logistic regression (standardised inputs)",
+      "params": {
+        "C": 1.0
+      },
+      "is_baseline": false,
+      "pooled": {
+        "n": 261593,
+        "base_rate": 0.559442,
+        "majority_class_accuracy": 0.559442,
+        "accuracy": 0.549804,
+        "balanced_accuracy": 0.497396,
+        "precision": 0.558077,
+        "recall": 0.938235,
+        "f1": 0.699864,
+        "roc_auc": 0.508213,
+        "brier": 0.247819,
+        "log_loss": 0.688962,
+        "predicted_positive_share": 0.94053,
+        "mean_probability": 0.565185,
+        "confusion": {
+          "tp": 137307,
+          "fp": 108729,
+          "tn": 6518,
+          "fn": 9039
+        }
+      },
+      "mean_fold_roc_auc": 0.508415,
+      "brier_skill_vs_prior": -0.003216,
+      "folds_with_positive_skill": 3,
+      "folds": [
+        {
+          "fold": "fold1:2010-01-04..2011-06-29",
+          "n": 29883,
+          "brier": 0.25005,
+          "brier_skill_vs_prior": -0.008764
+        },
+        {
+          "fold": "fold2:2011-06-30..2012-12-27",
+          "n": 30640,
+          "brier": 0.245415,
+          "brier_skill_vs_prior": 0.012401
+        },
+        {
+          "fold": "fold3:2012-12-28..2014-06-27",
+          "n": 30989,
+          "brier": 0.246955,
+          "brier_skill_vs_prior": -0.006382
+        },
+        {
+          "fold": "fold4:2014-06-30..2015-12-23",
+          "n": 31274,
+          "brier": 0.24675,
+          "brier_skill_vs_prior": 0.006429
+        },
+        {
+          "fold": "fold5:2015-12-24..2017-06-22",
+          "n": 32354,
+          "brier": 0.24736,
+          "brier_skill_vs_prior": 0.000201
+        },
+        {
+          "fold": "fold6:2017-06-23..2018-12-20",
+          "n": 33771,
+          "brier": 0.249894,
+          "brier_skill_vs_prior": -0.008861
+        },
+        {
+          "fold": "fold7:2018-12-21..2020-06-19",
+          "n": 36113,
+          "brier": 0.249385,
+          "brier_skill_vs_prior": -0.016807
+        },
+        {
+          "fold": "fold8:2020-06-22..2021-12-16",
+          "n": 36569,
+          "brier": 0.246598,
+          "brier_skill_vs_prior": -0.001927
+        }
+      ],
+      "seconds": 16.0
+    },
+    {
+      "candidate": "random_forest",
+      "label": "Random forest",
+      "params": {
+        "max_depth": 4
+      },
+      "is_baseline": false,
+      "pooled": {
+        "n": 261593,
+        "base_rate": 0.559442,
+        "majority_class_accuracy": 0.559442,
+        "accuracy": 0.556781,
+        "balanced_accuracy": 0.500203,
+        "precision": 0.559544,
+        "recall": 0.976118,
+        "f1": 0.71133,
+        "roc_auc": 0.509496,
+        "brier": 0.247155,
+        "log_loss": 0.687479,
+        "predicted_positive_share": 0.97594,
+        "mean_probability": 0.543608,
+        "confusion": {
+          "tp": 142851,
+          "fp": 112448,
+          "tn": 2799,
+          "fn": 3495
+        }
+      },
+      "mean_fold_roc_auc": 0.514737,
+      "brier_skill_vs_prior": -0.000528,
+      "folds_with_positive_skill": 5,
+      "folds": [
+        {
+          "fold": "fold1:2010-01-04..2011-06-29",
+          "n": 29883,
+          "brier": 0.249939,
+          "brier_skill_vs_prior": -0.008317
+        },
+        {
+          "fold": "fold2:2011-06-30..2012-12-27",
+          "n": 30640,
+          "brier": 0.247964,
+          "brier_skill_vs_prior": 0.002139
+        },
+        {
+          "fold": "fold3:2012-12-28..2014-06-27",
+          "n": 30989,
+          "brier": 0.244594,
+          "brier_skill_vs_prior": 0.003238
+        },
+        {
+          "fold": "fold4:2014-06-30..2015-12-23",
+          "n": 31274,
+          "brier": 0.246606,
+          "brier_skill_vs_prior": 0.00701
+        },
+        {
+          "fold": "fold5:2015-12-24..2017-06-22",
+          "n": 32354,
+          "brier": 0.246691,
+          "brier_skill_vs_prior": 0.002906
+        },
+        {
+          "fold": "fold6:2017-06-23..2018-12-20",
+          "n": 33771,
+          "brier": 0.249275,
+          "brier_skill_vs_prior": -0.00636
+        },
+        {
+          "fold": "fold7:2018-12-21..2020-06-19",
+          "n": 36113,
+          "brier": 0.246817,
+          "brier_skill_vs_prior": -0.006335
+        },
+        {
+          "fold": "fold8:2020-06-22..2021-12-16",
+          "n": 36569,
+          "brier": 0.245627,
+          "brier_skill_vs_prior": 0.002018
+        }
+      ],
+      "seconds": 172.3
+    },
+    {
+      "candidate": "random_forest",
+      "label": "Random forest",
+      "params": {
+        "max_depth": 8
+      },
+      "is_baseline": false,
+      "pooled": {
+        "n": 261593,
+        "base_rate": 0.559442,
+        "majority_class_accuracy": 0.559442,
+        "accuracy": 0.551586,
+        "balanced_accuracy": 0.504795,
+        "precision": 0.562085,
+        "recall": 0.898385,
+        "f1": 0.691515,
+        "roc_auc": 0.505131,
+        "brier": 0.24834,
+        "log_loss": 0.690004,
+        "predicted_positive_share": 0.89416,
+        "mean_probability": 0.54809,
+        "confusion": {
+          "tp": 131475,
+          "fp": 102431,
+          "tn": 12816,
+          "fn": 14871
+        }
+      },
+      "mean_fold_roc_auc": 0.512493,
+      "brier_skill_vs_prior": -0.005325,
+      "folds_with_positive_skill": 3,
+      "folds": [
+        {
+          "fold": "fold1:2010-01-04..2011-06-29",
+          "n": 29883,
+          "brier": 0.252802,
+          "brier_skill_vs_prior": -0.019867
+        },
+        {
+          "fold": "fold2:2011-06-30..2012-12-27",
+          "n": 30640,
+          "brier": 0.250401,
+          "brier_skill_vs_prior": -0.007665
+        },
+        {
+          "fold": "fold3:2012-12-28..2014-06-27",
+          "n": 30989,
+          "brier": 0.244288,
+          "brier_skill_vs_prior": 0.004486
+        },
+        {
+          "fold": "fold4:2014-06-30..2015-12-23",
+          "n": 31274,
+          "brier": 0.246179,
+          "brier_skill_vs_prior": 0.008729
+        },
+        {
+          "fold": "fold5:2015-12-24..2017-06-22",
+          "n": 32354,
+          "brier": 0.247663,
+          "brier_skill_vs_prior": -0.001025
+        },
+        {
+          "fold": "fold6:2017-06-23..2018-12-20",
+          "n": 33771,
+          "brier": 0.252455,
+          "brier_skill_vs_prior": -0.019199
+        },
+        {
+          "fold": "fold7:2018-12-21..2020-06-19",
+          "n": 36113,
+          "brier": 0.247305,
+          "brier_skill_vs_prior": -0.008326
+        },
+        {
+          "fold": "fold8:2020-06-22..2021-12-16",
+          "n": 36569,
+          "brier": 0.246068,
+          "brier_skill_vs_prior": 0.000227
+        }
+      ],
+      "seconds": 309.6
+    },
+    {
+      "candidate": "gradient_boosting",
+      "label": "Gradient boosting (scikit-learn)",
+      "params": {
+        "max_depth": 2
+      },
+      "is_baseline": false,
+      "pooled": {
+        "n": 261593,
+        "base_rate": 0.559442,
+        "majority_class_accuracy": 0.559442,
+        "accuracy": 0.554094,
+        "balanced_accuracy": 0.502173,
+        "precision": 0.560585,
+        "recall": 0.938912,
+        "f1": 0.702022,
+        "roc_auc": 0.508085,
+        "brier": 0.248286,
+        "log_loss": 0.690149,
+        "predicted_positive_share": 0.936998,
+        "mean_probability": 0.550647,
+        "confusion": {
+          "tp": 137406,
+          "fp": 107706,
+          "tn": 7541,
+          "fn": 8940
+        }
+      },
+      "mean_fold_roc_auc": 0.510922,
+      "brier_skill_vs_prior": -0.005107,
+      "folds_with_positive_skill": 5,
+      "folds": [
+        {
+          "fold": "fold1:2010-01-04..2011-06-29",
+          "n": 29883,
+          "brier": 0.252472,
+          "brier_skill_vs_prior": -0.018536
+        },
+        {
+          "fold": "fold2:2011-06-30..2012-12-27",
+          "n": 30640,
+          "brier": 0.248388,
+          "brier_skill_vs_prior": 0.000435
+        },
+        {
+          "fold": "fold3:2012-12-28..2014-06-27",
+          "n": 30989,
+          "brier": 0.244243,
+          "brier_skill_vs_prior": 0.00467
+        },
+        {
+          "fold": "fold4:2014-06-30..2015-12-23",
+          "n": 31274,
+          "brier": 0.246204,
+          "brier_skill_vs_prior": 0.008627
+        },
+        {
+          "fold": "fold5:2015-12-24..2017-06-22",
+          "n": 32354,
+          "brier": 0.247237,
+          "brier_skill_vs_prior": 0.000698
+        },
+        {
+          "fold": "fold6:2017-06-23..2018-12-20",
+          "n": 33771,
+          "brier": 0.2507,
+          "brier_skill_vs_prior": -0.012114
+        },
+        {
+          "fold": "fold7:2018-12-21..2020-06-19",
+          "n": 36113,
+          "brier": 0.250933,
+          "brier_skill_vs_prior": -0.023116
+        },
+        {
+          "fold": "fold8:2020-06-22..2021-12-16",
+          "n": 36569,
+          "brier": 0.246071,
+          "brier_skill_vs_prior": 0.000214
+        }
+      ],
+      "seconds": 354.3
+    },
+    {
+      "candidate": "gradient_boosting",
+      "label": "Gradient boosting (scikit-learn)",
+      "params": {
+        "max_depth": 3
+      },
+      "is_baseline": false,
+      "pooled": {
+        "n": 261593,
+        "base_rate": 0.559442,
+        "majority_class_accuracy": 0.559442,
+        "accuracy": 0.544598,
+        "balanced_accuracy": 0.500835,
+        "precision": 0.559915,
+        "recall": 0.868954,
+        "f1": 0.681015,
+        "roc_auc": 0.497032,
+        "brier": 0.250273,
+        "log_loss": 0.694768,
+        "predicted_positive_share": 0.868219,
+        "mean_probability": 0.551294,
+        "confusion": {
+          "tp": 127168,
+          "fp": 99952,
+          "tn": 15295,
+          "fn": 19178
+        }
+      },
+      "mean_fold_roc_auc": 0.501056,
+      "brier_skill_vs_prior": -0.01315,
+      "folds_with_positive_skill": 1,
+      "folds": [
+        {
+          "fold": "fold1:2010-01-04..2011-06-29",
+          "n": 29883,
+          "brier": 0.256055,
+          "brier_skill_vs_prior": -0.03299
+        },
+        {
+          "fold": "fold2:2011-06-30..2012-12-27",
+          "n": 30640,
+          "brier": 0.250125,
+          "brier_skill_vs_prior": -0.006554
+        },
+        {
+          "fold": "fold3:2012-12-28..2014-06-27",
+          "n": 30989,
+          "brier": 0.245514,
+          "brier_skill_vs_prior": -0.000513
+        },
+        {
+          "fold": "fold4:2014-06-30..2015-12-23",
+          "n": 31274,
+          "brier": 0.246251,
+          "brier_skill_vs_prior": 0.00844
+        },
+        {
+          "fold": "fold5:2015-12-24..2017-06-22",
+          "n": 32354,
+          "brier": 0.248564,
+          "brier_skill_vs_prior": -0.004667
+        },
+        {
+          "fold": "fold6:2017-06-23..2018-12-20",
+          "n": 33771,
+          "brier": 0.253721,
+          "brier_skill_vs_prior": -0.02431
+        },
+        {
+          "fold": "fold7:2018-12-21..2020-06-19",
+          "n": 36113,
+          "brier": 0.253094,
+          "brier_skill_vs_prior": -0.031929
+        },
+        {
+          "fold": "fold8:2020-06-22..2021-12-16",
+          "n": 36569,
+          "brier": 0.248684,
+          "brier_skill_vs_prior": -0.010404
+        }
+      ],
+      "seconds": 510.7
+    },
+    {
+      "candidate": "hist_gradient_boosting",
+      "label": "Histogram gradient boosting (scikit-learn)",
+      "params": {
+        "max_iter": 100,
+        "learning_rate": 0.02
+      },
+      "is_baseline": false,
+      "pooled": {
+        "n": 261593,
+        "base_rate": 0.559442,
+        "majority_class_accuracy": 0.559442,
+        "accuracy": 0.553031,
+        "balanced_accuracy": 0.501066,
+        "precision": 0.560002,
+        "recall": 0.938174,
+        "f1": 0.701359,
+        "roc_auc": 0.498558,
+        "brier": 0.248442,
+        "log_loss": 0.690329,
+        "predicted_positive_share": 0.937235,
+        "mean_probability": 0.548264,
+        "confusion": {
+          "tp": 137298,
+          "fp": 107876,
+          "tn": 7371,
+          "fn": 9048
+        }
+      },
+      "mean_fold_roc_auc": 0.502049,
+      "brier_skill_vs_prior": -0.005739,
+      "folds_with_positive_skill": 2,
+      "folds": [
+        {
+          "fold": "fold1:2010-01-04..2011-06-29",
+          "n": 29883,
+          "brier": 0.252418,
+          "brier_skill_vs_prior": -0.018317
+        },
+        {
+          "fold": "fold2:2011-06-30..2012-12-27",
+          "n": 30640,
+          "brier": 0.249703,
+          "brier_skill_vs_prior": -0.004856
+        },
+        {
+          "fold": "fold3:2012-12-28..2014-06-27",
+          "n": 30989,
+          "brier": 0.24446,
+          "brier_skill_vs_prior": 0.003785
+        },
+        {
+          "fold": "fold4:2014-06-30..2015-12-23",
+          "n": 31274,
+          "brier": 0.246717,
+          "brier_skill_vs_prior": 0.006563
+        },
+        {
+          "fold": "fold5:2015-12-24..2017-06-22",
+          "n": 32354,
+          "brier": 0.248441,
+          "brier_skill_vs_prior": -0.004169
+        },
+        {
+          "fold": "fold6:2017-06-23..2018-12-20",
+          "n": 33771,
+          "brier": 0.249703,
+          "brier_skill_vs_prior": -0.00809
+        },
+        {
+          "fold": "fold7:2018-12-21..2020-06-19",
+          "n": 36113,
+          "brier": 0.249464,
+          "brier_skill_vs_prior": -0.01713
+        },
+        {
+          "fold": "fold8:2020-06-22..2021-12-16",
+          "n": 36569,
+          "brier": 0.246813,
+          "brier_skill_vs_prior": -0.0028
+        }
+      ],
+      "seconds": 34.1
+    },
+    {
+      "candidate": "hist_gradient_boosting",
+      "label": "Histogram gradient boosting (scikit-learn)",
+      "params": {
+        "max_iter": 100,
+        "learning_rate": 0.05
+      },
+      "is_baseline": false,
+      "pooled": {
+        "n": 261593,
+        "base_rate": 0.559442,
+        "majority_class_accuracy": 0.559442,
+        "accuracy": 0.544999,
+        "balanced_accuracy": 0.499742,
+        "precision": 0.559297,
+        "recall": 0.880427,
+        "f1": 0.684048,
+        "roc_auc": 0.494696,
+        "brier": 0.25078,
+        "log_loss": 0.696027,
+        "predicted_positive_share": 0.880654,
+        "mean_probability": 0.555916,
+        "confusion": {
+          "tp": 128847,
+          "fp": 101526,
+          "tn": 13721,
+          "fn": 17499
+        }
+      },
+      "mean_fold_roc_auc": 0.499286,
+      "brier_skill_vs_prior": -0.015202,
+      "folds_with_positive_skill": 1,
+      "folds": [
+        {
+          "fold": "fold1:2010-01-04..2011-06-29",
+          "n": 29883,
+          "brier": 0.257469,
+          "brier_skill_vs_prior": -0.038694
+        },
+        {
+          "fold": "fold2:2011-06-30..2012-12-27",
+          "n": 30640,
+          "brier": 0.253417,
+          "brier_skill_vs_prior": -0.019802
+        },
+        {
+          "fold": "fold3:2012-12-28..2014-06-27",
+          "n": 30989,
+          "brier": 0.245407,
+          "brier_skill_vs_prior": -7.6e-05
+        },
+        {
+          "fold": "fold4:2014-06-30..2015-12-23",
+          "n": 31274,
+          "brier": 0.246179,
+          "brier_skill_vs_prior": 0.008731
+        },
+        {
+          "fold": "fold5:2015-12-24..2017-06-22",
+          "n": 32354,
+          "brier": 0.249903,
+          "brier_skill_vs_prior": -0.010077
+        },
+        {
+          "fold": "fold6:2017-06-23..2018-12-20",
+          "n": 33771,
+          "brier": 0.251801,
+          "brier_skill_vs_prior": -0.01656
+        },
+        {
+          "fold": "fold7:2018-12-21..2020-06-19",
+          "n": 36113,
+          "brier": 0.253729,
+          "brier_skill_vs_prior": -0.034516
+        },
+        {
+          "fold": "fold8:2020-06-22..2021-12-16",
+          "n": 36569,
+          "brier": 0.248511,
+          "brier_skill_vs_prior": -0.0097
+        }
+      ],
+      "seconds": 32.6
+    },
+    {
+      "candidate": "hist_gradient_boosting",
+      "label": "Histogram gradient boosting (scikit-learn)",
+      "params": {
+        "max_iter": 300,
+        "learning_rate": 0.02
+      },
+      "is_baseline": false,
+      "pooled": {
+        "n": 261593,
+        "base_rate": 0.559442,
+        "majority_class_accuracy": 0.559442,
+        "accuracy": 0.541803,
+        "balanced_accuracy": 0.499343,
+        "precision": 0.559064,
+        "recall": 0.856504,
+        "f1": 0.676535,
+        "roc_auc": 0.496469,
+        "brier": 0.251131,
+        "log_loss": 0.697003,
+        "predicted_positive_share": 0.857083,
+        "mean_probability": 0.553908,
+        "confusion": {
+          "tp": 125346,
+          "fp": 98861,
+          "tn": 16386,
+          "fn": 21000
+        }
+      },
+      "mean_fold_roc_auc": 0.501222,
+      "brier_skill_vs_prior": -0.016624,
+      "folds_with_positive_skill": 2,
+      "folds": [
+        {
+          "fold": "fold1:2010-01-04..2011-06-29",
+          "n": 29883,
+          "brier": 0.258832,
+          "brier_skill_vs_prior": -0.044193
+        },
+        {
+          "fold": "fold2:2011-06-30..2012-12-27",
+          "n": 30640,
+          "brier": 0.252295,
+          "brier_skill_vs_prior": -0.015288
+        },
+        {
+          "fold": "fold3:2012-12-28..2014-06-27",
+          "n": 30989,
+          "brier": 0.245149,
+          "brier_skill_vs_prior": 0.000977
+        },
+        {
+          "fold": "fold4:2014-06-30..2015-12-23",
+          "n": 31274,
+          "brier": 0.246205,
+          "brier_skill_vs_prior": 0.008624
+        },
+        {
+          "fold": "fold5:2015-12-24..2017-06-22",
+          "n": 32354,
+          "brier": 0.25021,
+          "brier_skill_vs_prior": -0.011318
+        },
+        {
+          "fold": "fold6:2017-06-23..2018-12-20",
+          "n": 33771,
+          "brier": 0.252214,
+          "brier_skill_vs_prior": -0.018225
+        },
+        {
+          "fold": "fold7:2018-12-21..2020-06-19",
+          "n": 36113,
+          "brier": 0.254544,
+          "brier_skill_vs_prior": -0.03784
+        },
+        {
+          "fold": "fold8:2020-06-22..2021-12-16",
+          "n": 36569,
+          "brier": 0.249588,
+          "brier_skill_vs_prior": -0.014076
+        }
+      ],
+      "seconds": 71.7
+    },
+    {
+      "candidate": "lightgbm",
+      "label": "LightGBM",
+      "params": {
+        "num_leaves": 4
+      },
+      "is_baseline": false,
+      "pooled": {
+        "n": 261593,
+        "base_rate": 0.559442,
+        "majority_class_accuracy": 0.559442,
+        "accuracy": 0.547908,
+        "balanced_accuracy": 0.50064,
+        "precision": 0.559793,
+        "recall": 0.898241,
+        "f1": 0.689736,
+        "roc_auc": 0.508085,
+        "brier": 0.248557,
+        "log_loss": 0.690693,
+        "predicted_positive_share": 0.897677,
+        "mean_probability": 0.551888,
+        "confusion": {
+          "tp": 131454,
+          "fp": 103372,
+          "tn": 11875,
+          "fn": 14892
+        }
+      },
+      "mean_fold_roc_auc": 0.512861,
+      "brier_skill_vs_prior": -0.006205,
+      "folds_with_positive_skill": 2,
+      "folds": [
+        {
+          "fold": "fold1:2010-01-04..2011-06-29",
+          "n": 29883,
+          "brier": 0.253853,
+          "brier_skill_vs_prior": -0.024109
+        },
+        {
+          "fold": "fold2:2011-06-30..2012-12-27",
+          "n": 30640,
+          "brier": 0.248591,
+          "brier_skill_vs_prior": -0.000384
+        },
+        {
+          "fold": "fold3:2012-12-28..2014-06-27",
+          "n": 30989,
+          "brier": 0.245218,
+          "brier_skill_vs_prior": 0.000694
+        },
+        {
+          "fold": "fold4:2014-06-30..2015-12-23",
+          "n": 31274,
+          "brier": 0.245981,
+          "brier_skill_vs_prior": 0.009526
+        },
+        {
+          "fold": "fold5:2015-12-24..2017-06-22",
+          "n": 32354,
+          "brier": 0.247599,
+          "brier_skill_vs_prior": -0.000764
+        },
+        {
+          "fold": "fold6:2017-06-23..2018-12-20",
+          "n": 33771,
+          "brier": 0.251008,
+          "brier_skill_vs_prior": -0.013356
+        },
+        {
+          "fold": "fold7:2018-12-21..2020-06-19",
+          "n": 36113,
+          "brier": 0.250182,
+          "brier_skill_vs_prior": -0.020056
+        },
+        {
+          "fold": "fold8:2020-06-22..2021-12-16",
+          "n": 36569,
+          "brier": 0.246213,
+          "brier_skill_vs_prior": -0.000363
+        }
+      ],
+      "seconds": 43.5
+    },
+    {
+      "candidate": "lightgbm",
+      "label": "LightGBM",
+      "params": {
+        "num_leaves": 8
+      },
+      "is_baseline": false,
+      "pooled": {
+        "n": 261593,
+        "base_rate": 0.559442,
+        "majority_class_accuracy": 0.559442,
+        "accuracy": 0.538849,
+        "balanced_accuracy": 0.502374,
+        "precision": 0.560891,
+        "recall": 0.809185,
+        "f1": 0.66254,
+        "roc_auc": 0.501262,
+        "brier": 0.250844,
+        "log_loss": 0.695859,
+        "predicted_positive_share": 0.807093,
+        "mean_probability": 0.552513,
+        "confusion": {
+          "tp": 118421,
+          "fp": 92709,
+          "tn": 22538,
+          "fn": 27925
+        }
+      },
+      "mean_fold_roc_auc": 0.510155,
+      "brier_skill_vs_prior": -0.015464,
+      "folds_with_positive_skill": 1,
+      "folds": [
+        {
+          "fold": "fold1:2010-01-04..2011-06-29",
+          "n": 29883,
+          "brier": 0.259722,
+          "brier_skill_vs_prior": -0.047784
+        },
+        {
+          "fold": "fold2:2011-06-30..2012-12-27",
+          "n": 30640,
+          "brier": 0.25044,
+          "brier_skill_vs_prior": -0.007821
+        },
+        {
+          "fold": "fold3:2012-12-28..2014-06-27",
+          "n": 30989,
+          "brier": 0.247523,
+          "brier_skill_vs_prior": -0.008696
+        },
+        {
+          "fold": "fold4:2014-06-30..2015-12-23",
+          "n": 31274,
+          "brier": 0.245602,
+          "brier_skill_vs_prior": 0.011055
+        },
+        {
+          "fold": "fold5:2015-12-24..2017-06-22",
+          "n": 32354,
+          "brier": 0.249707,
+          "brier_skill_vs_prior": -0.009287
+        },
+        {
+          "fold": "fold6:2017-06-23..2018-12-20",
+          "n": 33771,
+          "brier": 0.253288,
+          "brier_skill_vs_prior": -0.022561
+        },
+        {
+          "fold": "fold7:2018-12-21..2020-06-19",
+          "n": 36113,
+          "brier": 0.251464,
+          "brier_skill_vs_prior": -0.025281
+        },
+        {
+          "fold": "fold8:2020-06-22..2021-12-16",
+          "n": 36569,
+          "brier": 0.249364,
+          "brier_skill_vs_prior": -0.013167
+        }
+      ],
+      "seconds": 46.0
+    }
+  ],
+  "selection": {
+    "candidate": "random_forest",
+    "label": "Random forest",
+    "params": {
+      "max_depth": 4
+    },
+    "criterion": "lowest pooled walk-forward validation Brier score among models",
+    "validation_brier": 0.247155,
+    "validation_brier_skill_vs_prior": -0.000528,
+    "validation_brier_skill_interval": {
+      "point": -0.000528,
+      "low": -0.004827,
+      "high": 0.003223,
+      "level": 0.95,
+      "blocks": 624,
+      "resamples": 1000,
+      "method": "calendar-week block bootstrap",
+      "share_above_zero": 0.405
+    },
+    "folds_with_positive_skill": 5,
+    "n_folds": 8,
+    "calibration": {
+      "chosen": "sigmoid",
+      "brier_on_later_validation_rows": {
+        "none": 0.247177,
+        "sigmoid": 0.246181,
+        "isotonic": 0.247409
+      },
+      "fitted_on_rows": 261593,
+      "choice_made_on_rows": 104638
+    },
+    "written_at": "2026-10-11T20:25:06.894668Z"
+  },
+  "leakage_checks": [
+    {
+      "check": "model inputs are schema features only",
+      "passed": true,
+      "detail": "every input column is defined in the feature schema"
+    },
+    {
+      "check": "no feature is implausibly correlated with the future return",
+      "passed": true,
+      "detail": "largest absolute rank correlations: spy_ret_5 0.053, ret_5 0.050, qqq_ret_5 0.050 (limit 0.2)",
+      "max_abs_correlation": 0.053
+    },
+    {
+      "check": "training label windows end before every test period",
+      "passed": true,
+      "detail": "9 splits checked; smallest gap between the last training label and the first test date is 6 sessions (must exceed 5)",
+      "splits": [
+        {
+          "fold": "fold1:2010-01-04..2011-06-29",
+          "train_rows": 184043,
+          "test_rows": 29883,
+          "overlap_rows": 0,
+          "latest_train_label_end": "2009-12-23",
+          "sessions_between_last_label_and_test": 6,
+          "passed": true
+        },
+        {
+          "fold": "fold2:2011-06-30..2012-12-27",
+          "train_rows": 213916,
+          "test_rows": 30640,
+          "overlap_rows": 0,
+          "latest_train_label_end": "2011-06-22",
+          "sessions_between_last_label_and_test": 6,
+          "passed": true
+        },
+        {
+          "fold": "fold3:2012-12-28..2014-06-27",
+          "train_rows": 244536,
+          "test_rows": 30989,
+          "overlap_rows": 0,
+          "latest_train_label_end": "2012-12-19",
+          "sessions_between_last_label_and_test": 6,
+          "passed": true
+        },
+        {
+          "fold": "fold4:2014-06-30..2015-12-23",
+          "train_rows": 275515,
+          "test_rows": 31274,
+          "overlap_rows": 0,
+          "latest_train_label_end": "2014-06-20",
+          "sessions_between_last_label_and_test": 6,
+          "passed": true
+        },
+        {
+          "fold": "fold5:2015-12-24..2017-06-22",
+          "train_rows": 306769,
+          "test_rows": 32354,
+          "overlap_rows": 0,
+          "latest_train_label_end": "2015-12-16",
+          "sessions_between_last_label_and_test": 6,
+          "passed": true
+        },
+        {
+          "fold": "fold6:2017-06-23..2018-12-20",
+          "train_rows": 339103,
+          "test_rows": 33771,
+          "overlap_rows": 0,
+          "latest_train_label_end": "2017-06-15",
+          "sessions_between_last_label_and_test": 6,
+          "passed": true
+        },
+        {
+          "fold": "fold7:2018-12-21..2020-06-19",
+          "train_rows": 372784,
+          "test_rows": 36113,
+          "overlap_rows": 0,
+          "latest_train_label_end": "2018-12-13",
+          "sessions_between_last_label_and_test": 6,
+          "passed": true
+        },
+        {
+          "fold": "fold8:2020-06-22..2021-12-16",
+          "train_rows": 408887,
+          "test_rows": 36569,
+          "overlap_rows": 0,
+          "latest_train_label_end": "2020-06-12",
+          "sessions_between_last_label_and_test": 6,
+          "passed": true
+        },
+        {
+          "fold": "holdout:2022-01-03..2026-10-02",
+          "train_rows": 446426,
+          "test_rows": 115624,
+          "overlap_rows": 0,
+          "latest_train_label_end": "2021-12-23",
+          "sessions_between_last_label_and_test": 6,
+          "passed": true
+        }
+      ]
+    },
+    {
+      "check": "no (symbol, date) appears twice",
+      "passed": true,
+      "detail": "0 duplicated rows"
+    },
+    {
+      "check": "sampled rows are reproducible from past bars alone",
+      "passed": true,
+      "detail": "12 rows recomputed with every later bar removed; largest relative feature difference 0.00e+00, largest label difference 0.00e+00"
+    },
+    {
+      "check": "a model trained on shuffled labels cannot predict",
+      "passed": true,
+      "detail": "validation ROC-AUC over 5 shuffles of the training labels: 0.4887, 0.5065, 0.4867, 0.4981, 0.4961; mean 0.4952 (must be within 0.020 of 0.5)",
+      "mean_roc_auc": 0.4952,
+      "shuffles": [
+        0.4887,
+        0.5065,
+        0.4867,
+        0.4981,
+        0.4961
+      ]
+    }
+  ],
+  "uncertainty": {
+    "table": {
+      "horizon": 5,
+      "rows": 446426,
+      "mean_return": 0.0031355292475205047,
+      "unconditional": {
+        "0.05": -0.06153863185085301,
+        "0.10": -0.04108554202507658,
+        "0.25": -0.016694175696052915,
+        "0.50": 0.003243416076537775,
+        "0.75": 0.02298507671566874,
+        "0.90": 0.04637106053862594,
+        "0.95": 0.06606042969916437
+      },
+      "scaled": {
+        "0.05": -1.701599815884926,
+        "0.10": -1.1988339629002513,
+        "0.25": -0.5186121604402174,
+        "0.50": 0.10398182745549912,
+        "0.75": 0.7244085899084932,
+        "0.90": 1.3601304688622435,
+        "0.95": 1.817443035059501
+      },
+      "scaling": "forward return divided by (21-session standard deviation of daily returns x sqrt(horizon))"
+    }
+  },
+  "expected_return": {
+    "validation_r2_vs_historical_mean": -0.001704,
+    "rows": 261593
+  },
+  "regime_definition": {
+    "vix_tercile_cuts_from_development": [
+      14.91,
+      21.030001
+    ]
+  },
+  "environment": {
+    "python": "3.13.16",
+    "numpy": "2.5.3",
+    "pandas": "3.0.6",
+    "scikit-learn": "1.9.1",
+    "lightgbm": "4.7.0"
+  },
+  "limitations": [
+    "Skill in forecasting direction is not profit. Costs, the size of moves and position sizing are not part of these scores.",
+    "Rows are correlated across stocks and overlap in time; intervals resample calendar weeks to allow for this, which is an approximation.",
+    "The model was fitted through the end of the development period and has not been refitted on later data."
+  ],
+  "seconds": 2594.0
+}

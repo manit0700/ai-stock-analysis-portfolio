@@ -130,7 +130,7 @@ def main() -> int:
             "limits": [
                 "Universe fixed as of end-2021: no hindsight inside a 2022+ holdout, but companies delisted or acquired since are missing (Yahoo serves current tickers only).",
                 "Before 2022 the list is hindsight-chosen (large in 2021): development results are flattered by survivorship bias.",
-                "Yahoo does not adjust prices for every spin-off (e.g. GE's); such days appear as large one-day falls.",
+                "Spin-offs show as large one-day moves in Close; Adj Close (used for targets) absorbs them where Yahoo records the distribution (checked: MO 2008-03-31, -69.9% close, -2.5% adjusted).",
                 "Sector ETFs XLC (2018) and XLRE (2015) are young: their stocks have no sector features before then.",
                 "FRED yields are as published now, after revisions; Treasury yields are rarely revised.",
             ],
