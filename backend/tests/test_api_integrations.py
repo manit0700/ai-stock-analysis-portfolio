@@ -368,3 +368,42 @@ def test_overview_leaves_out_cards_it_has_no_data_for(settings_env) -> None:
         assert MarketService().get_market_overview()["cards"] == []
     finally:
         set_market_data(None)
+
+
+# ---------------------------------------------------------------- Yahoo snapshot builder
+def test_yahoo_snapshot_builder_writes_a_verifiable_snapshot_and_lists_failures(settings_env, monkeypatch, tmp_path) -> None:
+    import importlib.util
+    from pathlib import Path
+
+    from tests.helpers import make_ohlcv
+    from app.marketdata.snapshots import SnapshotStore
+
+    settings_env(MARKETVISION_OFFLINE="0", MARKETVISION_DATA_DIR=str(tmp_path))
+    spec = importlib.util.spec_from_file_location("build_yahoo_snapshot", Path(__file__).resolve().parents[1] / "scripts" / "build_yahoo_snapshot.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    bars = make_ohlcv(300, start="2025-08-01")
+    bars = bars[bars.index <= pd.Timestamp("2026-10-08")]
+
+    class Source(FakeProvider):
+        def history(self, symbol, start, end, interval):
+            if symbol == "XLRE":
+                raise ProviderError("yahoo returned no price history for XLRE.", details={"provider": "yahoo"}, code="no_data")
+            return super().history(symbol, start, end, interval)
+
+    rates = pd.Series([4.0, float("nan"), 4.1], index=pd.to_datetime(["2026-10-06", "2026-10-07", "2026-10-08"]))
+    md = MarketData([Source("yahoo", {"history"}, history=bars), FakeEconomic({"DGS10": rates, "T10Y2Y": rates - 4})], clock=lambda: NOW, sleep=lambda s: None)
+    monkeypatch.setattr(module, "build_market_data", lambda settings: md)
+    monkeypatch.setattr(module.time, "sleep", lambda s: None)
+    monkeypatch.setattr(sys, "argv", ["build_yahoo_snapshot.py", "--quick"])
+    assert module.main() == 0
+
+    store = SnapshotStore(tmp_path / "snapshots")
+    [entry] = store.list()
+    manifest = store.manifest(entry["id"])
+    assert store.verify(entry["id"]) == []
+    assert set(module.QUICK_UNIVERSE) <= set(manifest["symbols"]) and "XLRE" not in manifest["symbols"]
+    assert "XLRE" in manifest["metadata"]["failed"] and "XLRE" not in manifest["metadata"]["context_only"]
+    assert manifest["series"] == ["DGS10", "T10Y2Y"]
+    assert manifest["metadata"]["sectors"]["AMT"] == "XLRE"

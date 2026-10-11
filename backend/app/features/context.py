@@ -32,6 +32,20 @@ KNOWN_SECTORS: dict[str, str] = {
     "UNH": "XLV", "JNJ": "XLV", "PFE": "XLV", "MRK": "XLV", "LLY": "XLV", "ABBV": "XLV",
     "BA": "XLI", "CAT": "XLI", "GE": "XLI", "MMM": "XLI", "UTX": "XLI", "WM": "XLI",
     "WMT": "XLP", "PG": "XLP", "KO": "XLP", "PEP": "XLP", "COST": "XLP",
+    # The rest of the approximate end-2021 S&P 100 (scripts/build_yahoo_snapshot.py), by current GICS sector.
+    "ACN": "XLK", "TXN": "XLK",
+    "CMCSA": "XLC", "CHTR": "XLC", "T": "XLC", "TMUS": "XLC",
+    "LOW": "XLY", "SBUX": "XLY", "BKNG": "XLY", "GM": "XLY", "F": "XLY",
+    "PYPL": "XLF", "BK": "XLF", "BLK": "XLF", "BRK-B": "XLF", "C": "XLF", "COF": "XLF", "MET": "XLF", "MS": "XLF",
+    "USB": "XLF", "WFC": "XLF",
+    "COP": "XLE",
+    "ABT": "XLV", "AMGN": "XLV", "BIIB": "XLV", "BMY": "XLV", "CVS": "XLV", "DHR": "XLV", "GILD": "XLV", "MDT": "XLV",
+    "TMO": "XLV",
+    "EMR": "XLI", "FDX": "XLI", "GD": "XLI", "HON": "XLI", "LMT": "XLI", "RTX": "XLI", "UNP": "XLI", "UPS": "XLI",
+    "CL": "XLP", "KHC": "XLP", "MDLZ": "XLP", "MO": "XLP", "PM": "XLP", "WBA": "XLP", "TGT": "XLP",
+    "DUK": "XLU", "EXC": "XLU", "NEE": "XLU", "SO": "XLU",
+    "LIN": "XLB", "DOW": "XLB",
+    "AMT": "XLRE", "SPG": "XLRE",
 }
 
 
