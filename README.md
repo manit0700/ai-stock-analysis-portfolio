@@ -10,8 +10,8 @@ financial advice, and a forecast never places an order.
 ## What it tells you, honestly
 
 - A forecast endpoint serves the probability that a stock closes higher five sessions later.
-  **As of the October 2026 evaluation, no model beats the historical base rate** on out-of-sample
-  data, so the API serves the base rate and says so (`"edge_established": false`). A model only
+  **As of the October 2026 evaluations (the second one on 2022–2026 data no model had seen), no model
+  beats the historical base rate** on out-of-sample data, so the API serves the base rate and says so (`"edge_established": false`). A model only
   starts serving after it passes a promotion rule that was committed to git before its holdout
   was scored (`backend/app/forecast/promotion.py`).
 - Every response from the data layer names its provider, retrieval time, market time, freshness

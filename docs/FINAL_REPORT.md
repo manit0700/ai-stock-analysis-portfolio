@@ -77,6 +77,24 @@ The machinery itself is validated both ways on synthetic data: on random walks i
 promote; on a planted predictable signal it finds the effect, calibrates it, passes the rule and
 promotes — so "no edge" is a finding about the data, not a broken pipeline.
 
+### 3b. Second evaluation on current data (2026-10-11)
+
+This evaluation was planned and committed before the holdout was scored
+([EVALUATION_PLAN_2026-10.md](EVALUATION_PLAN_2026-10.md)).
+
+- **Data:** a Yahoo/FRED snapshot (`yahoo-daily-3b1b2218e5af`) of 97 large US stocks,
+  approximately the S&P 100 at the end of 2021. It has 563,020 rows from 2000 to October 2026,
+  and every feature group is present, including sector ETFs and Treasury yields.
+- **Holdout:** 2022-01 to 2026-10, which no model had been scored on.
+- **Result:** the same as the first evaluation. No candidate beat the constant base rate on
+  validation. The selected random forest scored a holdout Brier skill of **−0.0027
+  [−0.0054, +0.0001]** and an AUC of **0.503 [0.481, 0.528]**.
+- **Verdict:** not promoted.
+
+The 5-session up-rate fell from 54.5% (2000–2021) to 52.8% (2022–2026), and models trained on the
+older period over-stated rises. With more data and more feature groups, daily-bar features still
+show no usable edge on large US stocks. The labelled base rate is still served.
+
 ## 4. Backtesting results
 
 The engine's correctness is established by accounting invariants on synthetic paths (cash never

@@ -1,1 +1,2 @@
 {"at": "2026-10-09T22:14:16.869528Z", "holdout_key": "620ad16614291df0", "model_id": "mv5d-20261009-221045-8800915fff", "snapshot": "public-daily-6919ac62da5f", "holdout_start": "2016-01-04", "selected": "random_forest", "eligible": false}
+{"at": "2026-10-11T21:17:30.297046Z", "holdout_key": "06433c46a5ca7b31", "model_id": "mv5d-20261011-211129-e982a61a5a", "snapshot": "yahoo-daily-3b1b2218e5af", "holdout_start": "2022-01-03", "selected": "random_forest", "eligible": false}

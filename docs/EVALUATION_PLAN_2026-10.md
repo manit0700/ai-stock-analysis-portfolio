@@ -98,4 +98,31 @@ data. The new holdout (2022 onwards) has not been used to score, select or tune 
   - **No data problem was found, so nothing is changed.** The full run follows exactly as planned.
     Because validation skill is negative, requirement 5 of rule v1 is expected to fail. The
     holdout is still scored once, as committed.
-- Holdout run id and verdict: *(filled in after step 3)*
+- **Holdout run `mv5d-20261011-211129-e982a61a5a`, scored once on 2026-10-11 (0 earlier
+  scorings of this holdout). Verdict: not promoted. No predictive edge was established.**
+
+  | Holdout 2022-01-03 → 2026-10-02 (115,624 rows) | Accuracy | Majority | AUC | Brier | Skill vs base rate |
+  |---|---|---|---|---|---|
+  | Constant base rate (dev) | 0.5275 | 0.5275 | 0.500 | 0.24956 | 0 |
+  | Trailing frequency | 0.5232 | 0.5275 | 0.503 | 0.25011 | −0.0022 |
+  | Logistic regression | 0.5206 | 0.5275 | 0.510 | 0.24947 | +0.0004 |
+  | **Random forest (selected on development)** | 0.5286 | 0.5275 | 0.503 | 0.24982 | −0.0010 |
+  | Gradient boosting | 0.5261 | 0.5275 | 0.505 | 0.25047 | −0.0036 |
+  | Hist gradient boosting | 0.5297 | 0.5275 | 0.505 | 0.25039 | −0.0033 |
+  | LightGBM | 0.5277 | 0.5275 | 0.503 | 0.25067 | −0.0044 |
+
+  - **Selected model after calibration (sigmoid):** Brier skill **−0.0027 [−0.0054, +0.0001]**,
+    AUC **0.503 [0.481, 0.528]**.
+  - **Rule v1:** only the "is a model" and leakage requirements pass. Holdout skill, the AUC
+    interval, yearly skill (2 of 5 years positive: 2024 +0.0001, 2025 +0.0003), validation skill
+    and calibration (2 bands off by more than 0.03) all fail.
+  - Logistic regression's +0.0004 on the holdout is not a finding. It was not the model chosen
+    on development data, picking it now would be choosing on the holdout, and the amount is far
+    inside the noise.
+  - **What changed underneath:** stocks rose over 5 sessions 54.5% of the time in 2000–2021 but
+    52.8% in 2022–2026, with 49.9% in 2022 and 50.5% in 2026 so far. Every model learned the
+    older, higher rate and over-stated the chance of a rise in the weak years. That is the
+    calibration failure.
+  - **Consequence:** the application keeps serving the labelled base rate. The served baseline
+    is now this run's development base rate, 0.5454 (2000–2021), with its uncertainty table.
+    `edge_established` stays `false`.
